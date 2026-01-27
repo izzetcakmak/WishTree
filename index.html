@@ -40,8 +40,8 @@
     <button onclick="changeLang('en')">EN 🇬🇧</button>
 </div>
     <div class="container">
-        <h1>🌳 Arc Dilek Ağacı & NFT</h1>
-        <p>Dileğini dile, 0.01 USDC ile <b>Standart NFT</b>'ni kazan!</p>
+        <h1 id="mainTitle">🌳 Arc Dilek Ağacı & NFT</h1>
+        <p id="mainSubtitle">Dileğini dile, 0.01 Arc ile <b>Standart NFT</b>'ni kazan!</p>
         
         <button onclick="connectWallet()">Cüzdan Bağla</button>
         <br><br>
@@ -902,22 +902,25 @@
         };
 
         function changeLang(lang) {
-            // Yazıları güncelle
-            document.querySelector('h1').innerText = translations[lang].title;
-            document.querySelector('.container p').innerText = translations[lang].subtitle;
-            document.getElementById('wishInput').placeholder = translations[lang].placeholder;
-            
-            // "Dilek Gönder" butonunu bul ve güncelle
-            const wishBtn = document.querySelector('button[onclick="sendWish()"]');
-            if(wishBtn) wishBtn.innerText = translations[lang].button;
-            
-            // Geçmiş başlığını güncelle
-            document.querySelector('#wishesList h3').innerText = translations[lang].history;
-            
-            // Seçimi kaydet
-            localStorage.setItem('selectedLang', lang);
-            console.log("Dil değiştirildi: " + lang);
-        }
+    if (!translations[lang]) return; // Dil tanımlı değilse dur
+
+    // Elementleri ID ile hedefle (En güvenli yol)
+    const title = document.getElementById('mainTitle');
+    const subtitle = document.getElementById('mainSubtitle');
+    const input = document.getElementById('wishInput');
+    const historyHeader = document.querySelector('#wishesList h3');
+    const wishBtn = document.querySelector('button[onclick="sendWish()"]');
+
+    if (title) title.innerText = translations[lang].title;
+    if (subtitle) subtitle.innerText = translations[lang].subtitle;
+    if (input) input.placeholder = translations[lang].placeholder;
+    if (historyHeader) historyHeader.innerText = translations[lang].history;
+    if (wishBtn) wishBtn.innerText = translations[lang].button;
+    
+    // Seçimi kaydet
+    localStorage.setItem('selectedLang', lang);
+}
     </script>
 </body>
 </html>
+
