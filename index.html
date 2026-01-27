@@ -20,9 +20,25 @@
         #wishesList { text-align: left; margin-top: 30px; border-top: 2px solid #f4f4f4; padding-top: 20px; }
         .wish-card { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 12px; margin-bottom: 10px; position: relative; }
         .nft-badge { position: absolute; right: 10px; top: 10px; background: #6f42c1; color: white; padding: 4px 8px; border-radius: 5px; font-size: 10px; }
+		.lang-switch {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+.lang-switch button {
+    padding: 5px 10px;
+    font-size: 14px;
+    margin-left: 5px;
+    background: #1e293b;
+    border: 1px solid #334155;
+}
     </style>
 </head>
 <body>
+	<div class="lang-switch">
+    <button onclick="changeLang('tr')">TR 🇹🇷</button>
+    <button onclick="changeLang('en')">EN 🇬🇧</button>
+</div>
     <div class="container">
         <h1>🌳 Arc Dilek Ağacı & NFT</h1>
         <p>Dileğini dile, 0.01 USDC ile <b>Standart NFT</b>'ni kazan!</p>
@@ -862,10 +878,26 @@
         }
 
         window.onload = loadWishes;
-    </script>
-</body>
+
+    // translations bloğu artık script içinde
+    const translations = {
+        tr: {
+            title: "🌳 Arc Dilek Ağacı",
+            // ... diğer tr metinleri ...
+        },
+        en: {
+            title: "🌳 Arc Wish Tree",
+            // ... diğer en metinleri ...
+        }
+    };
+
+    function changeLang(lang) {
+        document.getElementById('mainTitle').innerText = translations[lang].title;
+        document.getElementById('subTitle').innerText = translations[lang].subtitle;
+        document.getElementById('wishInput').placeholder = translations[lang].placeholder;
+        document.getElementById('historyTitle').innerText = translations[lang].history;
+        // Buton için (eğer butona id="wishButton" verdiysen):
+        document.getElementById('wishButton').innerText = translations[lang].button;
+    }
+</script> </body>
 </html>
-
-
-
-
