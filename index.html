@@ -877,27 +877,47 @@
             } catch (err) { alert(err.message); }
         }
 
-        window.onload = loadWishes;
+       window.onload = function() {
+            loadWishes();
+            // Sayfa açıldığında kaydedilmiş dili hatırla, yoksa 'tr' yap
+            const savedLang = localStorage.getItem('selectedLang') || 'tr';
+            changeLang(savedLang);
+        };
 
-    // translations bloğu artık script içinde
-    const translations = {
-        tr: {
-            title: "🌳 Arc Dilek Ağacı",
-            // ... diğer tr metinleri ...
-        },
-        en: {
-            title: "🌳 Arc Wish Tree",
-            // ... diğer en metinleri ...
+        const translations = {
+            tr: {
+                title: "🌳 Arc Dilek Ağacı & NFT",
+                subtitle: "Dileğini dile, 0.01 Arc ile Standart NFT'ni kazan!",
+                placeholder: "Sonsuzluğa bir dilek bırak...",
+                button: "Dilek Gönder & NFT Bas",
+                history: "📜 Blokzincir Kayıtları (ERC-721)"
+            },
+            en: {
+                title: "🌳 Arc Wish Tree & NFT",
+                subtitle: "Make a wish, mint your Standard NFT for 0.01 Arc!",
+                placeholder: "Leave a wish for eternity...",
+                button: "Send Wish & Mint NFT",
+                history: "📜 Blockchain Records (ERC-721)"
+            }
+        };
+
+        function changeLang(lang) {
+            // Yazıları güncelle
+            document.querySelector('h1').innerText = translations[lang].title;
+            document.querySelector('.container p').innerText = translations[lang].subtitle;
+            document.getElementById('wishInput').placeholder = translations[lang].placeholder;
+            
+            // "Dilek Gönder" butonunu bul ve güncelle
+            const wishBtn = document.querySelector('button[onclick="sendWish()"]');
+            if(wishBtn) wishBtn.innerText = translations[lang].button;
+            
+            // Geçmiş başlığını güncelle
+            document.querySelector('#wishesList h3').innerText = translations[lang].history;
+            
+            // Seçimi kaydet
+            localStorage.setItem('selectedLang', lang);
+            console.log("Dil değiştirildi: " + lang);
         }
-    };
-
-    function changeLang(lang) {
-        document.getElementById('mainTitle').innerText = translations[lang].title;
-        document.getElementById('subTitle').innerText = translations[lang].subtitle;
-        document.getElementById('wishInput').placeholder = translations[lang].placeholder;
-        document.getElementById('historyTitle').innerText = translations[lang].history;
-        // Buton için (eğer butona id="wishButton" verdiysen):
-        document.getElementById('wishButton').innerText = translations[lang].button;
-    }
-</script> </body>
+    </script>
+</body>
 </html>
