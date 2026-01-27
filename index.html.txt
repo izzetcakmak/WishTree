@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Arc Dilek Ağacı & Standart NFT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 50px; background: #eef2f3; }
+        .container { background: white; padding: 40px; border-radius: 20px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 600px; }
+        input { padding: 12px; width: 85%; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 15px; }
+        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0056b3; transform: scale(1.05); }
+        .admin-section { margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px dashed #ffeeba; border-radius: 10px; display: none; }
+        #wishesList { text-align: left; margin-top: 30px; border-top: 2px solid #f4f4f4; padding-top: 20px; }
+        .wish-card { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 12px; margin-bottom: 10px; position: relative; }
+        .nft-badge { position: absolute; right: 10px; top: 10px; background: #6f42c1; color: white; padding: 4px 8px; border-radius: 5px; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌳 Arc Dilek Ağacı & NFT</h1>
+        <p>Dileğini dile, 0.01 USDC ile <b>Standart NFT</b>'ni kazan!</p>
+        
+        <button onclick="connectWallet()">Cüzdan Bağla</button>
+        <br><br>
+        <input type="text" id="wishInput" placeholder="Sonsuzluğa bir dilek bırak...">
+        <br>
+        <button onclick="sendWish()">Dilek Gönder & NFT Bas</button>
+        <p id="status"></p>
+
+        <div id="adminPanel" class="admin-section">
+            <strong>💎 Kasa Yönetimi (Sadece Owner)</strong><br>
+            Bakiye: <span id="contractBalance">0</span> USDC <br><br>
+            <button onclick="withdrawFunds()" style="background: #28a745;">Parayı Kasaya Çek</button>
+        </div>
+
+        <div id="wishesList">
+            <h3>📜 Blokzincir Kayıtları (ERC-721)</h3>
+            <div id="listContent">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <script>
+        const contractAddress = "0xD0e94ba24667Db049B96e00F1CC6d366dBa071AD"; 
+        
+        const abi = [
+			{
+				"internalType": "string",
+				"name": "_message",
+				"type": "string"
+			}
+		],
+		"name": "makeAWish",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "allWishes",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAllWishes",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "message",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "nftId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct ArcNFTTree.Wish[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getContractBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "nextNFTId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address payable",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "WISH_FEE",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+        let currentAccount = "";
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                currentAccount = accounts[0];
+                document.getElementById('status').innerText = "Bağlandı: " + currentAccount.substring(0,6) + "...";
+                checkOwner();
+                loadWishes();
+            }
+        }
+
+        async function checkOwner() {
+            const provider = new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network");
+            const contract = new ethers.Contract(contractAddress, abi, provider);
+            try {
+                const owner = await contract.owner();
+                const balance = await provider.getBalance(contractAddress);
+                
+                if(currentAccount.toLowerCase() === owner.toLowerCase()) {
+                    document.getElementById('adminPanel').style.display = 'block';
+                    document.getElementById('contractBalance').innerText = ethers.utils.formatEther(balance);
+                }
+            } catch(e) { console.error("Sahip kontrolü hatası:", e); }
+        }
+
+        async function loadWishes() {
+            const provider = new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network");
+            const contract = new ethers.Contract(contractAddress, abi, provider);
+            try {
+                // Yeni kontrattaki getAllWishes fonksiyonu 3 ayrı dizi döner
+                const result = await contract.getAllWishes();
+                const senders = result[0];
+                const messages = result[1];
+                const ids = result[2];
+
+                let html = "";
+                for (let i = senders.length - 1; i >= 0; i--) {
+                    html += `
+                        <div class="wish-card">
+                            <span class="nft-badge">NFT ID: #${ids[i]}</span>
+                            <small>${senders[i].substring(0,10)}...</small><br>
+                            <strong>"${messages[i]}"</strong>
+                        </div>`;
+                }
+                document.getElementById('listContent').innerHTML = html || "Henüz dilek yok.";
+            } catch (e) { 
+                console.log("Dilek yükleme hatası:", e);
+                document.getElementById('listContent').innerHTML = "Dilekler şu an listelenemiyor.";
+            }
+        }
+
+        async function sendWish() {
+            const msg = document.getElementById('wishInput').value;
+            if(!msg) return alert("Dilek yazmalısın!");
+            
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            const contract = new ethers.Contract(contractAddress, abi, signer);
+
+            try {
+                document.getElementById('status').innerText = "İşlem gönderiliyor...";
+                const tx = await contract.makeAWish(msg, {
+                    value: ethers.utils.parseUnits("0.01", 18),
+                    gasLimit: 500000
+                });
+                document.getElementById('status').innerText = "Blok onayı bekleniyor...";
+                await tx.wait();
+                alert("Başarılı! Artık Arc Scan'de bir NFT koleksiyonun var!");
+                location.reload();
+            } catch (err) { 
+                console.error(err);
+                alert("Hata: " + err.message); 
+            }
+        }
+
+        async function withdrawFunds() {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            const contract = new ethers.Contract(contractAddress, abi, signer);
+            try {
+                const tx = await contract.withdraw();
+                await tx.wait();
+                alert("Kasa başarıyla boşaltıldı!");
+                location.reload();
+            } catch (err) { alert(err.message); }
+        }
+
+        window.onload = loadWishes;
+    </script>
+</body>
+</html>
