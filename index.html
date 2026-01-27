@@ -41,7 +41,7 @@
     </div>
 
     <script>
-        const contractAddress = "0x23260ccE9C395a66eBc9e19e0E228897D97b5F67";
+        const contractAddress = "0x377735992C3E57206978C5653F5B8CD635899680";
         const abi = [
 	{
 		"inputs": [
@@ -518,7 +518,7 @@
 						"type": "uint256"
 					}
 				],
-				"internalType": "struct ArcWishingTreeNFT.Wish[]",
+				"internalType": "struct ArcNFTTree.Wish[]",
 				"name": "",
 				"type": "tuple[]"
 			}
@@ -597,7 +597,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "nextTokenId",
+		"name": "nextNFTId",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -759,40 +759,6 @@
 		],
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "wishes",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "message",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "nftId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
 	}
 ];
 
@@ -823,30 +789,35 @@
         }
 
         async function loadWishes() {
-            const provider = new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network");
-            const contract = new ethers.Contract(contractAddress, abi, provider);
-            try {
-                // Yeni kontrattaki getAllWishes fonksiyonu 3 ayrı dizi döner
-                const result = await contract.getAllWishes();
-                const senders = result[0];
-                const messages = result[1];
-                const ids = result[2];
-
-                let html = "";
-                for (let i = senders.length - 1; i >= 0; i--) {
-                    html += `
-                        <div class="wish-card">
-                            <span class="nft-badge">NFT ID: #${ids[i]}</span>
-                            <small>${senders[i].substring(0,10)}...</small><br>
-                            <strong>"${messages[i]}"</strong>
-                        </div>`;
-                }
-                document.getElementById('listContent').innerHTML = html || "Henüz dilek yok.";
-            } catch (e) { 
-                console.log("Dilek yükleme hatası:", e);
-                document.getElementById('listContent').innerHTML = "Dilekler şu an listelenemiyor.";
-            }
+    try {
+        const provider = new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network");
+        const contract = new ethers.Contract(contractAddress, abi, provider);
+        
+        // Kontrattan veriyi çekiyoruz
+        const wishes = await contract.getAllWishes();
+        
+        let html = "";
+        
+        // Eğer veriler dizi (array) olarak geliyorsa işle
+        if (wishes && wishes.length > 0) {
+            // Verileri tersten (en yeni en üstte) listele
+            wishes.slice().reverse().forEach(w => {
+                html += `
+                    <div class="wish-card">
+                        <span class="nft-badge">NFT ID: #${w.nftId.toString()}</span>
+                        <small>Gönderen: ${w.sender.substring(0,10)}...</small><br>
+                        <strong>"${w.message}"</strong>
+                    </div>`;
+            });
+            document.getElementById('listContent').innerHTML = html;
+        } else {
+            document.getElementById('listContent').innerHTML = "Henüz kaydedilmiş bir dilek yok.";
         }
+    } catch (e) { 
+        console.error("Listeleme Hatası:", e);
+        document.getElementById('listContent').innerHTML = "Veriler şu an yüklenemiyor. Lütfen sayfayı yenileyin.";
+    }
+}
 
         async function sendWish() {
             const msg = document.getElementById('wishInput').value;
@@ -888,3 +859,4 @@
     </script>
 </body>
 </html>
+
