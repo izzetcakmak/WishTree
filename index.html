@@ -878,10 +878,10 @@
         }
 
        window.onload = function() {
-            loadWishes();
             // Sayfa açıldığında kaydedilmiş dili hatırla, yoksa 'tr' yap
             const savedLang = localStorage.getItem('selectedLang') || 'tr';
             changeLang(savedLang);
+            loadWishes(); 
         };
 
         const translations = {
@@ -890,37 +890,68 @@
                 subtitle: "Dileğini dile, 0.01 Arc ile Standart NFT'ni kazan!",
                 placeholder: "Sonsuzluğa bir dilek bırak...",
                 button: "Dilek Gönder & NFT Bas",
-                history: "📜 Blokzincir Kayıtları (ERC-721)"
+                history: "📜 Blokzincir Kayıtları (ERC-721)",
+                connectBtn: "Cüzdan Bağla",
+                sender: "Gönderen"
             },
             en: {
                 title: "🌳 Arc Wish Tree & NFT",
                 subtitle: "Make a wish, mint your Standard NFT for 0.01 Arc!",
                 placeholder: "Leave a wish for eternity...",
                 button: "Send Wish & Mint NFT",
-                history: "📜 Blockchain Records (ERC-721)"
+                history: "📜 Blockchain Records (ERC-721)",
+                connectBtn: "Connect Wallet",
+                sender: "Sender"
             }
         };
 
         function changeLang(lang) {
-    if (!translations[lang]) return; // Dil tanımlı değilse dur
+            if (!translations[lang]) return;
 
-    // Elementleri ID ile hedefle (En güvenli yol)
-    const title = document.getElementById('mainTitle');
-    const subtitle = document.getElementById('mainSubtitle');
-    const input = document.getElementById('wishInput');
-    const historyHeader = document.querySelector('#wishesList h3');
-    const wishBtn = document.querySelector('button[onclick="sendWish()"]');
+            document.getElementById('mainTitle').innerText = translations[lang].title;
+            document.getElementById('mainSubtitle').innerText = translations[lang].subtitle;
+            document.getElementById('wishInput').placeholder = translations[lang].placeholder;
+            document.querySelector('#wishesList h3').innerText = translations[lang].history;
+            
+            // "Dilek Gönder" butonu
+            const wishBtn = document.querySelector('button[onclick="sendWish()"]');
+            if (wishBtn) wishBtn.innerText = translations[lang].button;
+            
+            // "Cüzdan Bağla" butonu
+            const connBtn = document.querySelector('button[onclick="connectWallet()"]');
+            if (connBtn) connBtn.innerText = translations[lang].connectBtn;
 
-    if (title) title.innerText = translations[lang].title;
-    if (subtitle) subtitle.innerText = translations[lang].subtitle;
-    if (input) input.placeholder = translations[lang].placeholder;
-    if (historyHeader) historyHeader.innerText = translations[lang].history;
-    if (wishBtn) wishBtn.innerText = translations[lang].button;
-    
-    // Seçimi kaydet
-    localStorage.setItem('selectedLang', lang);
-}
+            localStorage.setItem('selectedLang', lang);
+            loadWishes(); // Listeyi yeni dille tekrar yükle
+        }
+
+        // loadWishes içindeki html döngüsünü de şu şekilde güncellemen lazım:
+        async function loadWishes() {
+            try {
+                const provider = new ethers.providers.JsonRpcProvider("https://rpc.testnet.arc.network");
+                const contract = new ethers.Contract(contractAddress, abi, provider);
+                const wishes = await contract.getAllWishes();
+                const currentLang = localStorage.getItem('selectedLang') || 'tr';
+                const label = translations[currentLang].sender;
+                
+                let html = "";
+                if (wishes && wishes.length > 0) {
+                    wishes.slice().reverse().forEach(w => {
+                        html += `
+                            <div class="wish-card">
+                                <span class="nft-badge">NFT ID: #${w.nftId.toString()}</span>
+                                <small>${label}: ${w.sender.substring(0,10)}...</small><br>
+                                <strong>"${w.message}"</strong>
+                            </div>`;
+                    });
+                    document.getElementById('listContent').innerHTML = html;
+                } else {
+                    document.getElementById('listContent').innerHTML = currentLang === 'tr' ? "Henüz dilek yok." : "No wishes yet.";
+                }
+            } catch (e) { console.error(e); }
+        }
     </script>
 </body>
 </html>
+
 
