@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#1a472a"/>
+  <path d="M128 40 L108 80 L88 80 L108 110 L98 140 L128 120 L158 140 L148 110 L168 80 L148 80 Z" fill="#2d5a3d"/>
+  <path d="M128 80 L115 105 L100 105 L115 125 L108 150 L128 135 L148 150 L141 125 L156 105 L141 105 Z" fill="#3d7a4d"/>
+  <path d="M128 110 L118 130 L108 130 L118 145 L113 165 L128 153 L143 165 L138 145 L148 130 L138 130 Z" fill="#4d9a5d"/>
+  <circle cx="95" cy="95" r="6" fill="#ffd700" opacity="0.9"/>
+  <circle cx="161" cy="95" r="6" fill="#ffd700" opacity="0.9"/>
+  <circle cx="115" cy="125" r="5" fill="#ffd700" opacity="0.8"/>
+  <circle cx="141" cy="125" r="5" fill="#ffd700" opacity="0.8"/>
+  <circle cx="128" cy="145" r="5" fill="#ffd700" opacity="0.8"/>
+  <circle cx="105" cy="115" r="4" fill="#ffd700" opacity="0.7"/>
+  <circle cx="151" cy="115" r="4" fill="#ffd700" opacity="0.7"/>
+  <rect x="120" y="165" width="16" height="55" fill="#5a3a2a" rx="2"/>
+  <polygon points="128,25 133,38 147,40 137,49 140,63 128,56 116,63 119,49 109,40 123,38" fill="#ffd700"/>
+  <polygon points="128,30 131,38 139,39 133,44 135,52 128,48 121,52 123,44 117,39 125,38" fill="#ffed4e"/>
+</svg>
