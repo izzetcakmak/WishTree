@@ -45,7 +45,7 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
     const handleChainChanged = (_chainId: string) => {
       // Parse the new chain ID directly from the event for immediate update
       const newChainId = typeof _chainId === 'string' ? parseInt(_chainId, 16) : 0;
-      const arcChainId = 1146703430;
+      const arcChainId = 5042002;
       setIsCorrectNetwork(newChainId === arcChainId);
     };
     win?.ethereum?.on?.('accountsChanged', handleAccountsChanged);
