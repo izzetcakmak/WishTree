@@ -2,7 +2,7 @@ export const CONTRACT_ADDRESS = '0x7C51Acfdcff284c7cEc7b907ADc81948B632593a';
 
 export const ARC_TESTNET = {
   chainId: 1146703430,
-  chainIdHex: '0x4454C436',
+  chainIdHex: '0x44594E46',
   name: 'Arc Testnet',
   rpcUrl: 'https://rpc.testnet.arc.network',
   currency: {

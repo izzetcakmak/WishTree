@@ -53,10 +53,15 @@ export async function switchToArcTestnet(): Promise<boolean> {
 
 export async function checkNetwork(): Promise<boolean> {
   try {
-    const provider = await getProvider();
-    if (!provider) return false;
-    const network = await provider.getNetwork();
-    return network?.chainId === ARC_TESTNET.chainId;
+    if (typeof window === 'undefined') return false;
+    const win = window as any;
+    if (!win?.ethereum) return false;
+    // Use ethereum.request directly instead of provider.getNetwork()
+    // to avoid stale cached chain ID issues with ethers.js v5
+    const chainIdHex = await win.ethereum.request({ method: 'eth_chainId' });
+    if (!chainIdHex) return false;
+    const chainId = parseInt(chainIdHex, 16);
+    return chainId === ARC_TESTNET.chainId;
   } catch {
     return false;
   }

@@ -42,8 +42,11 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
         onDisconnect?.();
       }
     };
-    const handleChainChanged = () => {
-      checkNetwork().then(setIsCorrectNetwork);
+    const handleChainChanged = (_chainId: string) => {
+      // Parse the new chain ID directly from the event for immediate update
+      const newChainId = typeof _chainId === 'string' ? parseInt(_chainId, 16) : 0;
+      const arcChainId = 1146703430;
+      setIsCorrectNetwork(newChainId === arcChainId);
     };
     win?.ethereum?.on?.('accountsChanged', handleAccountsChanged);
     win?.ethereum?.on?.('chainChanged', handleChainChanged);
@@ -85,10 +88,16 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
   const handleSwitchNetwork = async () => {
     setLoading(true);
     try {
-      await switchToArcTestnet();
-      const correct = await checkNetwork();
-      setIsCorrectNetwork(correct);
-    } catch {}
+      const switched = await switchToArcTestnet();
+      if (switched) {
+        // Small delay to let MetaMask propagate the chain change
+        await new Promise((r) => setTimeout(r, 500));
+        const correct = await checkNetwork();
+        setIsCorrectNetwork(correct);
+      }
+    } catch (err) {
+      console.error('Switch network error:', err);
+    }
     setLoading(false);
   };
 
