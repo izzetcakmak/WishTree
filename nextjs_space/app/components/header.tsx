@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession, signOut } from 'next-auth/react';
 import { motion } from 'framer-motion';
-import { TreePine, Sun, Moon, LogOut, LogIn, Wallet, Menu, X } from 'lucide-react';
+import { TreePine, Sun, Moon, LogOut, LogIn, Wallet, Menu, X, Bot } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Header() {
@@ -34,6 +34,9 @@ export default function Header() {
           </Link>
           <Link href="/dashboard" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors">
             Dashboard
+          </Link>
+          <Link href="/agents" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex items-center gap-1">
+            <Bot className="w-3.5 h-3.5" /> AI Agents
           </Link>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -70,6 +73,7 @@ export default function Header() {
           <Link href="/" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">Home</Link>
           <Link href="/wishes" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">All Wishes</Link>
           <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">Dashboard</Link>
+          <Link href="/agents" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/10"><Bot className="w-4 h-4" /> AI Agents</Link>
           <button onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setMobileOpen(false); }} className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-accent/10">
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} Toggle Theme
           </button>

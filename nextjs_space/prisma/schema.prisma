@@ -21,6 +21,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   wishes        Wish[]
+  agents        Agent[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -90,4 +91,51 @@ model ContactSubmission {
   message   String
   status    String   @default("new")
   createdAt DateTime @default(now())
+}
+
+model Agent {
+  id              String            @id @default(cuid())
+  agentTokenId    Int?              @unique
+  name            String
+  description     String
+  agentType       String
+  capabilities    String[]
+  version         String            @default("1.0.0")
+  metadataURI     String?
+  ownerAddress    String
+  txHash          String?           @unique
+  status          String            @default("pending")
+  userId          String?
+  user            User?             @relation(fields: [userId], references: [id])
+  feedbacks       AgentFeedback[]
+  validations     AgentValidation[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model AgentFeedback {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  score       Int
+  tag         String
+  comment     String?
+  validator   String
+  txHash      String?  @unique
+  createdAt   DateTime @default(now())
+}
+
+model AgentValidation {
+  id            String   @id @default(cuid())
+  agentId       String
+  agent         Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  requestHash   String   @unique
+  requestURI    String?
+  validator     String
+  response      Int?
+  responseTag   String?
+  status        String   @default("pending")
+  txHash        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
