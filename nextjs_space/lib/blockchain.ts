@@ -5,7 +5,8 @@ export async function getProvider(): Promise<ethers.providers.Web3Provider | nul
   if (typeof window === 'undefined') return null;
   const win = window as any;
   if (!win?.ethereum) return null;
-  return new ethers.providers.Web3Provider(win.ethereum);
+  // "any" allows the provider to work with any network and not cache chain ID
+  return new ethers.providers.Web3Provider(win.ethereum, 'any');
 }
 
 export async function connectWallet(): Promise<string | null> {
@@ -24,21 +25,24 @@ export async function switchToArcTestnet(): Promise<boolean> {
   try {
     const win = window as any;
     if (!win?.ethereum) return false;
+    const targetChainId = ARC_TESTNET.chainIdHex;
     try {
       await win.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: ARC_TESTNET.chainIdHex }],
+        params: [{ chainId: targetChainId }],
       });
       return true;
     } catch (switchError: any) {
-      if (switchError?.code === 4902) {
+      // 4902 = chain not added yet, or unrecognized chain
+      if (switchError?.code === 4902 || switchError?.code === -32603) {
         await win.ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: ARC_TESTNET.chainIdHex,
+            chainId: targetChainId,
             chainName: ARC_TESTNET.name,
             nativeCurrency: ARC_TESTNET.currency,
             rpcUrls: [ARC_TESTNET.rpcUrl],
+            blockExplorerUrls: [ARC_TESTNET.blockExplorer || 'https://testnet.arcscan.app'],
           }],
         });
         return true;

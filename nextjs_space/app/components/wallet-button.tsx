@@ -24,8 +24,10 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
       if (accounts?.[0]) {
         setAddress(accounts[0]);
         onConnect?.(accounts[0]);
-        const correct = await checkNetwork();
-        setIsCorrectNetwork(correct);
+        // Direct chain ID check from MetaMask - no caching
+        const chainIdHex = await win.ethereum.request({ method: 'eth_chainId' });
+        const chainId = parseInt(chainIdHex, 16);
+        setIsCorrectNetwork(chainId === 5042002);
       }
     } catch {}
   }, [onConnect]);
@@ -69,13 +71,20 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
       if (addr) {
         setAddress(addr);
         onConnect?.(addr);
-        const correct = await checkNetwork();
-        if (!correct) {
-          await switchToArcTestnet();
-          const rechecked = await checkNetwork();
-          setIsCorrectNetwork(rechecked);
-        } else {
+        // Read chain ID directly from MetaMask
+        const chainIdHex = await win.ethereum.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(chainIdHex, 16);
+        const isArc = currentChainId === 5042002;
+        if (isArc) {
           setIsCorrectNetwork(true);
+        } else {
+          setIsCorrectNetwork(false);
+          const switched = await switchToArcTestnet();
+          if (switched) {
+            await new Promise((r) => setTimeout(r, 500));
+            const recheckHex = await win.ethereum.request({ method: 'eth_chainId' });
+            setIsCorrectNetwork(parseInt(recheckHex, 16) === 5042002);
+          }
         }
       }
     } catch (err: any) {
