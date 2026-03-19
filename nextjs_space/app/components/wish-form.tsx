@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, Loader2, Check, TreePine, Heart, Briefcase, GraduationCap, Coins, Plane, Users, Star } from 'lucide-react';
 import { makeAWish } from '@/lib/blockchain';
 import { WISH_COST } from '@/lib/contract';
+import { useT } from '@/lib/i18n';
 
 interface WishAnalysis {
   sentiment: string;
@@ -17,16 +18,6 @@ interface WishFormProps {
   onWishSent?: (wish: string, txHash: string, analysis?: WishAnalysis) => void;
 }
 
-const CATEGORIES = [
-  { label: 'Love', value: 'love', icon: Heart },
-  { label: 'Career', value: 'career', icon: Briefcase },
-  { label: 'Education', value: 'education', icon: GraduationCap },
-  { label: 'Money', value: 'money', icon: Coins },
-  { label: 'Travel', value: 'travel', icon: Plane },
-  { label: 'Family', value: 'family', icon: Users },
-  { label: 'General', value: 'general', icon: Star },
-];
-
 export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
   const [wish, setWish] = useState('');
   const [status, setStatus] = useState<'idle' | 'analyzing' | 'sending' | 'confirming' | 'success' | 'error'>('idle');
@@ -36,6 +27,17 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('general');
+  const t = useT();
+
+  const CATEGORIES = [
+    { label: t('cat.love'), value: 'love', icon: Heart },
+    { label: t('cat.career'), value: 'career', icon: Briefcase },
+    { label: t('cat.education'), value: 'education', icon: GraduationCap },
+    { label: t('cat.money'), value: 'money', icon: Coins },
+    { label: t('cat.travel'), value: 'travel', icon: Plane },
+    { label: t('cat.family'), value: 'family', icon: Users },
+    { label: t('cat.general'), value: 'general', icon: Star },
+  ];
 
   const analyzeWish = async (wishText: string): Promise<WishAnalysis | null> => {
     try {
@@ -121,7 +123,6 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
       await tx?.wait?.();
       setStatus('success');
 
-      // Save to DB
       try {
         await fetch('/api/wishes', {
           method: 'POST',
@@ -161,7 +162,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
       {/* AI Suggestions */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-xs text-gray-400">Get inspired:</span>
+          <span className="text-xs text-gray-400">{t('wishForm.getInspired')}</span>
           {CATEGORIES.map((cat: any) => {
             const Icon = cat?.icon ?? Star;
             return (
@@ -186,7 +187,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
             className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
           >
             {loadingSuggestions ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-            AI Suggest
+            {t('wishForm.aiSuggest')}
           </motion.button>
         </div>
         <AnimatePresence>
@@ -220,7 +221,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
           <textarea
             value={wish}
             onChange={(e: any) => setWish(e?.target?.value ?? '')}
-            placeholder={walletAddress ? 'Write your wish here... 🌟' : 'Connect your wallet first to make a wish...'}
+            placeholder={walletAddress ? t('wishForm.placeholder') : t('wishForm.connectFirst')}
             disabled={!walletAddress || status !== 'idle'}
             maxLength={280}
             rows={3}
@@ -228,7 +229,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
           />
           <div className="absolute bottom-0 left-0 right-0 px-4 py-2.5 flex items-center justify-between bg-black/10">
             <span className="text-xs text-gray-500">
-              {wish?.length ?? 0}/280 • Cost: {WISH_COST} ARC
+              {wish?.length ?? 0}/280 • {t('wishForm.cost')}: {WISH_COST} ARC
             </span>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -237,12 +238,12 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
               disabled={!wish?.trim() || !walletAddress || status !== 'idle'}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-medium shadow-lg shadow-accent/20 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {status === 'idle' && <><Send className="w-3.5 h-3.5" /> Send Wish</>}
-              {status === 'analyzing' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>}
-              {status === 'sending' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>}
-              {status === 'confirming' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Confirming...</>}
-              {status === 'success' && <><Check className="w-3.5 h-3.5" /> Wish Sent!</>}
-              {status === 'error' && <><Send className="w-3.5 h-3.5" /> Try Again</>}
+              {status === 'idle' && <><Send className="w-3.5 h-3.5" /> {t('wishForm.sendWish')}</>}
+              {status === 'analyzing' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('wishForm.analyzing')}</>}
+              {status === 'sending' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('wishForm.sending')}</>}
+              {status === 'confirming' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('wishForm.confirming')}</>}
+              {status === 'success' && <><Check className="w-3.5 h-3.5" /> {t('wishForm.wishSent')}</>}
+              {status === 'error' && <><Send className="w-3.5 h-3.5" /> {t('wishForm.tryAgain')}</>}
             </motion.button>
           </div>
         </div>
@@ -259,7 +260,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
           >
             <div className="flex items-center gap-3 mb-2">
               <Sparkles className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium">AI Analysis</span>
+              <span className="text-sm font-medium">{t('wishForm.aiAnalysis')}</span>
             </div>
             <div className="flex flex-wrap gap-2 mb-2">
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sentimentColor(analysis?.sentiment ?? '')}`}>
@@ -269,7 +270,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
                 {analysis?.category ?? 'other'}
               </span>
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400">
-                {((analysis?.score ?? 0) * 100).toFixed(0)}% confidence
+                {((analysis?.score ?? 0) * 100).toFixed(0)}% {t('wishForm.confidence')}
               </span>
             </div>
             <p className="text-xs text-gray-400">{analysis?.interpretation ?? ''}</p>
@@ -288,7 +289,7 @@ export default function WishForm({ walletAddress, onWishSent }: WishFormProps) {
           >
             <div className="flex items-center gap-2 mb-1">
               <TreePine className="w-5 h-5 text-accent" />
-              <span className="font-medium text-accent">🎉 Wish Sent & NFT Minted!</span>
+              <span className="font-medium text-accent">{t('wishForm.successTitle')}</span>
             </div>
             <p className="text-xs text-gray-400 font-mono break-all">TX: {txHash}</p>
           </motion.div>

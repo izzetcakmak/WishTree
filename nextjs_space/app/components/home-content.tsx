@@ -8,6 +8,7 @@ import WishForm from './wish-form';
 import WishCard from './wish-card';
 import WishTreeVisual from './wish-tree-visual';
 import { getAllWishes } from '@/lib/blockchain';
+import { useT } from '@/lib/i18n';
 
 // Suppress ethers overflow errors from console
 if (typeof window !== 'undefined') {
@@ -33,6 +34,7 @@ export default function HomeContent() {
   const [chainWishes, setChainWishes] = useState<string[]>([]);
   const [dbWishes, setDbWishes] = useState<DbWish[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   const fetchWishes = useCallback(async () => {
     setLoading(true);
@@ -83,10 +85,10 @@ export default function HomeContent() {
             className="text-center mb-6"
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-3">
-              Make Your <span className="bg-gradient-to-r from-accent to-emerald-400 bg-clip-text text-transparent">Wish</span>
+              {t('home.title')} <span className="bg-gradient-to-r from-accent to-emerald-400 bg-clip-text text-transparent">{t('home.titleAccent')}</span>
             </h1>
             <p className="text-gray-400 text-sm md:text-base max-w-md mx-auto">
-              Write a wish on the blockchain, receive a unique NFT, and let AI reveal its meaning.
+              {t('home.subtitle')}
             </p>
           </motion.div>
 
@@ -115,17 +117,17 @@ export default function HomeContent() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
             <TreePine className="w-5 h-5 text-accent mx-auto mb-1" />
             <p className="text-2xl font-bold">{chainWishes?.length ?? 0}</p>
-            <p className="text-xs text-gray-400">Total Wishes</p>
+            <p className="text-xs text-gray-400">{t('home.totalWishes')}</p>
           </motion.div>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-center">
             <Sparkles className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
             <p className="text-2xl font-bold">{chainWishes?.length ?? 0}</p>
-            <p className="text-xs text-gray-400">NFTs Minted</p>
+            <p className="text-xs text-gray-400">{t('home.nftsMinted')}</p>
           </motion.div>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="text-center">
             <Globe className="w-5 h-5 text-blue-400 mx-auto mb-1" />
             <p className="text-2xl font-bold">Arc</p>
-            <p className="text-xs text-gray-400">Testnet</p>
+            <p className="text-xs text-gray-400">{t('home.testnet')}</p>
           </motion.div>
         </div>
       </section>
@@ -140,7 +142,7 @@ export default function HomeContent() {
           >
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent" />
-              Recent Wishes
+              {t('home.recentWishes')}
             </h2>
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -165,7 +167,7 @@ export default function HomeContent() {
             ) : (
               <div className="text-center py-12 glass rounded-xl">
                 <TreePine className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500">No wishes yet. Be the first!</p>
+                <p className="text-gray-500">{t('home.noWishesYet')}</p>
               </div>
             )}
           </motion.div>
@@ -176,7 +178,7 @@ export default function HomeContent() {
       <footer className="py-6 border-t border-white/5">
         <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-between text-xs text-gray-500">
           <span className="flex items-center gap-1"><TreePine className="w-3 h-3" /> WishTree</span>
-          <span>Powered by Arc Testnet</span>
+          <span>{t('home.poweredBy')}</span>
         </div>
       </footer>
     </div>

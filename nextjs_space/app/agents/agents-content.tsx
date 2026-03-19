@@ -5,6 +5,7 @@ import { Bot, Plus, Shield, Star, ExternalLink, Search } from 'lucide-react';
 import Link from 'next/link';
 import Header from '../components/header';
 import { AGENT_CATEGORIES } from '@/lib/erc8004';
+import { useT } from '@/lib/i18n';
 
 interface AgentData {
   id: string;
@@ -28,6 +29,7 @@ export default function AgentsContent() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
+  const t = useT();
 
   useEffect(() => {
     fetchAgents();
@@ -74,15 +76,15 @@ export default function AgentsContent() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
                 <Bot className="w-8 h-8 text-accent" />
-                AI Agents Registry
+                {t('agents.title')}
               </h1>
-              <p className="text-gray-400 mt-1">ERC-8004 onchain AI agent identities on Arc Testnet</p>
+              <p className="text-gray-400 mt-1">{t('agents.subtitle')}</p>
             </div>
             <Link
               href="/agents/register"
               className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors"
             >
-              <Plus className="w-4 h-4" /> Register Agent
+              <Plus className="w-4 h-4" /> {t('agents.register')}
             </Link>
           </div>
 
@@ -91,7 +93,7 @@ export default function AgentsContent() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
-                placeholder="Search agents..."
+                placeholder={t('agents.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-accent/50"
@@ -102,7 +104,7 @@ export default function AgentsContent() {
               onChange={(e) => setFilterType(e.target.value)}
               className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-accent/50 text-gray-300"
             >
-              <option value="">All Types</option>
+              <option value="">{t('agents.allTypes')}</option>
               {AGENT_CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
               ))}
@@ -113,18 +115,18 @@ export default function AgentsContent() {
         {loading ? (
           <div className="text-center py-20 text-gray-500">
             <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
-            Loading agents...
+            {t('agents.loading')}
           </div>
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
             <Bot className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No Agents Found</h3>
-            <p className="text-gray-500 mb-6">Be the first to register an AI agent on the WishTree network!</p>
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">{t('agents.noFound')}</h3>
+            <p className="text-gray-500 mb-6">{t('agents.beFirst')}</p>
             <Link
               href="/agents/register"
               className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors"
             >
-              <Plus className="w-4 h-4" /> Register Your Agent
+              <Plus className="w-4 h-4" /> {t('agents.registerYour')}
             </Link>
           </motion.div>
         ) : (
@@ -151,7 +153,7 @@ export default function AgentsContent() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           agent.status === 'registered' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                         }`}>
-                          {agent.status === 'registered' ? 'Registered' : 'Pending'}
+                          {agent.status === 'registered' ? t('agents.registered') : t('agents.pending')}
                         </span>
                       </div>
 
@@ -179,7 +181,7 @@ export default function AgentsContent() {
                               <Star className="w-3 h-3 fill-current" /> {avgScore}
                             </span>
                           )}
-                          <span>{agent._count.feedbacks} feedback{agent._count.feedbacks !== 1 ? 's' : ''}</span>
+                          <span>{agent._count.feedbacks} {agent._count.feedbacks !== 1 ? t('agents.feedbacks') : t('agents.feedback')}</span>
                         </div>
                       </div>
 

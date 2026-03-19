@@ -9,6 +9,7 @@ import WalletButton from '../components/wallet-button';
 import WishCard from '../components/wish-card';
 import { getAllWishes, getTotalSupply } from '@/lib/blockchain';
 import dynamic from 'next/dynamic';
+import { useT } from '@/lib/i18n';
 
 const DashboardChart = dynamic(() => import('./dashboard-chart'), { ssr: false, loading: () => <div className="h-64 glass rounded-xl animate-shimmer" /> });
 
@@ -29,6 +30,7 @@ export default function DashboardContent() {
   const [dbWishes, setDbWishes] = useState<DbWish[]>([]);
   const [totalSupply, setTotalSupply] = useState(0);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -87,9 +89,9 @@ export default function DashboardContent() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-accent" />
-            Dashboard
+            {t('dashboard.title')}
           </h1>
-          <p className="text-sm text-gray-400 mb-6">Overview of WishTree activity and your contributions.</p>
+          <p className="text-sm text-gray-400 mb-6">{t('dashboard.subtitle')}</p>
         </motion.div>
 
         {/* Wallet */}
@@ -101,10 +103,10 @@ export default function DashboardContent() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Wishes', value: chainWishes?.length ?? 0, icon: TreePine, color: 'text-accent' },
-            { label: 'NFTs Minted', value: totalSupply, icon: Sparkles, color: 'text-yellow-400' },
-            { label: 'My Wishes', value: myWishes?.length ?? 0, icon: TrendingUp, color: 'text-blue-400' },
-            { label: 'Categories', value: Object.keys(categoryCounts ?? {})?.length ?? 0, icon: Hash, color: 'text-purple-400' },
+            { label: t('dashboard.totalWishes'), value: chainWishes?.length ?? 0, icon: TreePine, color: 'text-accent' },
+            { label: t('dashboard.nftsMinted'), value: totalSupply, icon: Sparkles, color: 'text-yellow-400' },
+            { label: t('dashboard.myWishes'), value: myWishes?.length ?? 0, icon: TrendingUp, color: 'text-blue-400' },
+            { label: t('dashboard.categories'), value: Object.keys(categoryCounts ?? {})?.length ?? 0, icon: Hash, color: 'text-purple-400' },
           ].map((stat: any, i: number) => {
             const StatIcon = stat?.icon ?? TreePine;
             return (
@@ -133,7 +135,7 @@ export default function DashboardContent() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <TreePine className="w-5 h-5 text-accent" />
-              My Wishes
+              {t('dashboard.myWishes')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(myWishes ?? []).map((w: any, i: number) => (

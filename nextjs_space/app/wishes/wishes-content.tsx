@@ -5,6 +5,7 @@ import { TreePine, Sparkles, Loader2, BarChart3, Search, Filter } from 'lucide-r
 import Header from '../components/header';
 import WishCard from '../components/wish-card';
 import { getAllWishes } from '@/lib/blockchain';
+import { useT } from '@/lib/i18n';
 
 interface DbWish {
   id: string;
@@ -32,6 +33,7 @@ export default function WishesContent() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const t = useT();
 
   const fetchWishes = useCallback(async () => {
     setLoading(true);
@@ -119,9 +121,9 @@ export default function WishesContent() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
             <TreePine className="w-7 h-7 text-accent" />
-            All Wishes
+            {t('wishes.title')}
           </h1>
-          <p className="text-sm text-gray-400 mb-6">Browse all wishes hanging on the WishTree blockchain.</p>
+          <p className="text-sm text-gray-400 mb-6">{t('wishes.subtitle')}</p>
         </motion.div>
 
         {/* AI Summary */}
@@ -135,7 +137,7 @@ export default function WishesContent() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-accent/20 text-purple-300 border border-purple-500/20 hover:border-purple-500/40 transition-colors disabled:opacity-50"
             >
               {loadingSummary ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
-              {loadingSummary ? 'Analyzing all wishes...' : 'Generate AI Summary'}
+              {loadingSummary ? t('wishes.analyzingAll') : t('wishes.generateSummary')}
             </motion.button>
           ) : (
             <motion.div
@@ -145,29 +147,29 @@ export default function WishesContent() {
             >
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-5 h-5 text-purple-400" />
-                <h3 className="font-semibold">AI Wishes Summary</h3>
+                <h3 className="font-semibold">{t('wishes.aiSummary')}</h3>
               </div>
               <p className="text-sm text-gray-300 mb-4">{summary?.summary ?? ''}</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="p-3 rounded-lg glass text-center">
                   <p className="text-lg font-bold">{summary?.totalWishes ?? 0}</p>
-                  <p className="text-xs text-gray-400">Total Wishes</p>
+                  <p className="text-xs text-gray-400">{t('wishes.totalWishes')}</p>
                 </div>
                 <div className="p-3 rounded-lg glass text-center">
                   <p className={`text-lg font-bold ${moodColor(summary?.overallMood ?? '')}`}>{summary?.overallMood ?? 'mixed'}</p>
-                  <p className="text-xs text-gray-400">Overall Mood</p>
+                  <p className="text-xs text-gray-400">{t('wishes.overallMood')}</p>
                 </div>
                 <div className="p-3 rounded-lg glass text-center">
                   <p className="text-lg font-bold text-accent">{((summary?.moodScore ?? 0) * 100).toFixed(0)}%</p>
-                  <p className="text-xs text-gray-400">Mood Score</p>
+                  <p className="text-xs text-gray-400">{t('wishes.moodScore')}</p>
                 </div>
                 <div className="p-3 rounded-lg glass">
                   <div className="flex flex-wrap gap-1">
-                    {(summary?.topThemes ?? []).map((t: string, i: number) => (
-                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">{t}</span>
+                    {(summary?.topThemes ?? []).map((th: string, i: number) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">{th}</span>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Top Themes</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('wishes.topThemes')}</p>
                 </div>
               </div>
               {summary?.interestingInsight && (
@@ -185,7 +187,7 @@ export default function WishesContent() {
               type="text"
               value={search}
               onChange={(e: any) => setSearch(e?.target?.value ?? '')}
-              placeholder="Search wishes..."
+              placeholder={t('wishes.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2 rounded-xl glass text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-transparent"
             />
           </div>
@@ -229,7 +231,7 @@ export default function WishesContent() {
         ) : (
           <div className="text-center py-16 glass rounded-xl">
             <TreePine className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500">{search ? 'No wishes match your search.' : 'No wishes yet.'}</p>
+            <p className="text-gray-500">{search ? t('wishes.noMatch') : t('wishes.noWishes')}</p>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import Header from '../../components/header';
 import { AGENT_CATEGORIES, ERC8004_CONTRACTS } from '@/lib/erc8004';
 import { giveFeedback, requestValidation, getValidationStatus } from '@/lib/erc8004-blockchain';
 import { connectWallet, checkNetwork, switchToArcTestnet } from '@/lib/blockchain';
+import { useT } from '@/lib/i18n';
 
 interface AgentDetail {
   id: string;
@@ -28,6 +29,7 @@ interface AgentDetail {
 export default function AgentDetailContent() {
   const params = useParams();
   const id = params?.id as string;
+  const t = useT();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'feedback' | 'validation'>('overview');
@@ -64,22 +66,22 @@ export default function AgentDetailContent() {
 
   async function ensureWallet() {
     const addr = await connectWallet();
-    if (!addr) throw new Error('Please connect wallet');
+    if (!addr) throw new Error(t('agentDetail.connectWallet'));
     const onArc = await checkNetwork();
     if (!onArc) {
       const switched = await switchToArcTestnet();
-      if (!switched) throw new Error('Please switch to Arc Testnet');
+      if (!switched) throw new Error(t('agentDetail.switchNetwork'));
     }
     return addr;
   }
 
   async function handleFeedback() {
-    if (!agent?.agentTokenId) { setFbError('Agent has no onchain token ID'); return; }
+    if (!agent?.agentTokenId) { setFbError(t('agentDetail.noTokenId')); return; }
     setFbLoading(true); setFbError(''); setFbSuccess(false);
     try {
       const addr = await ensureWallet();
       if (addr.toLowerCase() === agent.ownerAddress.toLowerCase()) {
-        setFbError('Owner cannot give feedback to their own agent (ERC-8004 rule)');
+        setFbError(t('agentDetail.ownerCannotFb'));
         setFbLoading(false);
         return;
       }
@@ -96,15 +98,15 @@ export default function AgentDetailContent() {
       setFbComment('');
       fetchAgent();
     } catch (err: any) {
-      setFbError(err?.code === 'ACTION_REJECTED' ? 'Transaction rejected' : (err?.message || 'Feedback failed'));
+      setFbError(err?.code === 'ACTION_REJECTED' ? t('agentDetail.txRejected') : (err?.message || t('agentDetail.feedbackFailed')));
     } finally {
       setFbLoading(false);
     }
   }
 
   async function handleRequestValidation() {
-    if (!agent?.agentTokenId) { setValError('Agent has no onchain token ID'); return; }
-    if (!valAddress.trim()) { setValError('Enter validator address'); return; }
+    if (!agent?.agentTokenId) { setValError(t('agentDetail.noTokenId')); return; }
+    if (!valAddress.trim()) { setValError(t('agentDetail.enterValidator')); return; }
     setValLoading(true); setValError(''); setValSuccess(false);
     try {
       await ensureWallet();
@@ -122,7 +124,7 @@ export default function AgentDetailContent() {
       setValAddress('');
       fetchAgent();
     } catch (err: any) {
-      setValError(err?.code === 'ACTION_REJECTED' ? 'Transaction rejected' : (err?.message || 'Validation request failed'));
+      setValError(err?.code === 'ACTION_REJECTED' ? t('agentDetail.txRejected') : (err?.message || t('agentDetail.validationFailed')));
     } finally {
       setValLoading(false);
     }
@@ -156,13 +158,14 @@ export default function AgentDetailContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
         <Header />
-        <div className="text-center py-32 text-gray-400">Agent not found</div>
+        <div className="text-center py-32 text-gray-400">{t('agentDetail.notFound')}</div>
       </div>
     );
   }
 
   const catInfo = getCategoryInfo(agent.agentType);
   const avgScore = getAvgScore();
+  const fbCount = agent.feedbacks.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
@@ -181,7 +184,7 @@ export default function AgentDetailContent() {
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     agent.status === 'registered' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                   }`}>
-                    {agent.status === 'registered' ? 'Registered' : 'Pending'}
+                    {agent.status === 'registered' ? t('agentDetail.registered') : t('agentDetail.pending')}
                   </span>
                   <span className="text-xs text-gray-500">v{agent.version}</span>
                 </div>
@@ -206,7 +209,7 @@ export default function AgentDetailContent() {
                   )}
                   <div className="flex items-center gap-1.5 text-gray-400">
                     <MessageSquare className="w-4 h-4" />
-                    {agent.feedbacks.length} feedback{agent.feedbacks.length !== 1 ? 's' : ''}
+                    {fbCount} {fbCount !== 1 ? t('agentDetail.feedbackPlural') : t('agentDetail.feedback')}
                   </div>
                 </div>
 
@@ -225,7 +228,7 @@ export default function AgentDetailContent() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-accent/70 hover:text-accent mt-3"
                   >
-                    <ExternalLink className="w-3 h-3" /> View registration on ArcScan
+                    <ExternalLink className="w-3 h-3" /> {t('agentDetail.viewRegistration')}
                   </a>
                 )}
               </div>
@@ -242,7 +245,7 @@ export default function AgentDetailContent() {
                   activeTab === tab ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                {tab === 'overview' ? 'Overview' : tab === 'feedback' ? 'Reputation' : 'Validation'}
+                {tab === 'overview' ? t('agentDetail.overview') : tab === 'feedback' ? t('agentDetail.reputation') : t('agentDetail.validation')}
               </button>
             ))}
           </div>
@@ -253,26 +256,26 @@ export default function AgentDetailContent() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
                   <div className="text-2xl font-bold text-accent">{agent.feedbacks.length}</div>
-                  <div className="text-xs text-gray-500 mt-1">Feedbacks</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('agentDetail.feedbacks')}</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
                   <div className="text-2xl font-bold text-yellow-400">{avgScore ?? '-'}</div>
-                  <div className="text-xs text-gray-500 mt-1">Avg Score</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('agentDetail.avgScore')}</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
                   <div className="text-2xl font-bold text-green-400">
                     {agent.validations.filter((v) => v.status === 'verified').length}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">Verified</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('agentDetail.verified')}</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
                   <div className="text-2xl font-bold text-purple-400">{catInfo.label}</div>
-                  <div className="text-xs text-gray-500 mt-1">Type</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('agentDetail.type')}</div>
                 </div>
               </div>
 
               <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-                <h3 className="font-semibold mb-3">ERC-8004 Contracts</h3>
+                <h3 className="font-semibold mb-3">{t('agentDetail.contracts')}</h3>
                 <div className="space-y-2 text-sm">
                   {Object.entries(ERC8004_CONTRACTS).map(([name, addr]) => (
                     <div key={name} className="flex items-center justify-between">
@@ -297,15 +300,15 @@ export default function AgentDetailContent() {
             <div className="space-y-6">
               <div className="p-5 rounded-xl bg-white/5 border border-white/10">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-400" /> Give Reputation Feedback
+                  <Star className="w-5 h-5 text-yellow-400" /> {t('agentDetail.giveFeedback')}
                 </h3>
                 <p className="text-xs text-gray-500 mb-4">
-                  Per ERC-8004, agent owners cannot record reputation for their own agents.
+                  {t('agentDetail.ownerCannot')}
                 </p>
 
                 {fbSuccess && (
                   <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm mb-4">
-                    <CheckCircle2 className="w-4 h-4" /> Feedback recorded onchain!
+                    <CheckCircle2 className="w-4 h-4" /> {t('agentDetail.feedbackRecorded')}
                   </div>
                 )}
                 {fbError && (
@@ -316,7 +319,7 @@ export default function AgentDetailContent() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Score: {fbScore}</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('agentDetail.score')}: {fbScore}</label>
                     <input
                       type="range"
                       min="0"
@@ -326,34 +329,34 @@ export default function AgentDetailContent() {
                       className="w-full accent-accent"
                     />
                     <div className="flex justify-between text-xs text-gray-600">
-                      <span>0 (Poor)</span><span>50</span><span>100 (Excellent)</span>
+                      <span>0 ({t('agentDetail.poor')})</span><span>50</span><span>100 ({t('agentDetail.excellent')})</span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Tag</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('agentDetail.tag')}</label>
                     <select
                       value={fbTag}
                       onChange={(e) => setFbTag(e.target.value)}
                       className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300"
                     >
-                      <option value="good_performance">Good Performance</option>
-                      <option value="successful_trade">Successful Trade</option>
-                      <option value="accurate_analysis">Accurate Analysis</option>
-                      <option value="helpful_suggestion">Helpful Suggestion</option>
-                      <option value="fast_execution">Fast Execution</option>
-                      <option value="poor_result">Poor Result</option>
-                      <option value="other">Other</option>
+                      <option value="good_performance">{t('tag.good_performance')}</option>
+                      <option value="successful_trade">{t('tag.successful_trade')}</option>
+                      <option value="accurate_analysis">{t('tag.accurate_analysis')}</option>
+                      <option value="helpful_suggestion">{t('tag.helpful_suggestion')}</option>
+                      <option value="fast_execution">{t('tag.fast_execution')}</option>
+                      <option value="poor_result">{t('tag.poor_result')}</option>
+                      <option value="other">{t('tag.other')}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Comment (optional)</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('agentDetail.comment')}</label>
                     <input
                       type="text"
                       value={fbComment}
                       onChange={(e) => setFbComment(e.target.value)}
-                      placeholder="Optional comment..."
+                      placeholder={t('agentDetail.commentPlaceholder')}
                       className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white"
                     />
                   </div>
@@ -364,14 +367,14 @@ export default function AgentDetailContent() {
                     className="w-full py-3 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {fbLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-                    {fbLoading ? 'Sending...' : 'Submit Feedback'}
+                    {fbLoading ? t('agentDetail.sendingFb') : t('agentDetail.submitFeedback')}
                   </button>
                 </div>
               </div>
 
               {agent.feedbacks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-3">Feedback History</h3>
+                  <h3 className="font-semibold mb-3">{t('agentDetail.feedbackHistory')}</h3>
                   <div className="space-y-2">
                     {agent.feedbacks.map((fb) => (
                       <div key={fb.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -402,22 +405,22 @@ export default function AgentDetailContent() {
             <div className="space-y-6">
               <div className="p-5 rounded-xl bg-white/5 border border-white/10">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-green-400" /> Doğrulama Talebi
+                  <Shield className="w-5 h-5 text-green-400" /> {t('agentDetail.validationTitle')}
                 </h3>
 
                 {/* Explanation box */}
                 <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 mb-4">
-                  <p className="text-xs text-blue-300 mb-2 font-medium">ℹ️ Doğrulama Nasıl Çalışır?</p>
+                  <p className="text-xs text-blue-300 mb-2 font-medium">ℹ️ {t('agentDetail.validationHowTitle')}</p>
                   <ul className="text-xs text-gray-400 space-y-1.5 list-disc list-inside">
-                    <li>Agent sahibi olarak, güvendiğiniz bir <strong className="text-gray-300">doğrulayıcıya (validator)</strong> doğrulama talebi gönderirsiniz.</li>
-                    <li>Doğrulayıcı, herhangi bir Ethereum cüzdan adresine sahip kişi olabilir — örneğin bir arkadaşınız, bir topluluk üyesi veya kendiniz.</li>
-                    <li>Doğrulayıcı daha sonra zincir üzerinde (onchain) yanıt vererek agent&apos;ınızı onaylar veya reddeder.</li>
+                    <li>{t('agentDetail.validationHow1')}</li>
+                    <li>{t('agentDetail.validationHow2')}</li>
+                    <li>{t('agentDetail.validationHow3')}</li>
                   </ul>
                 </div>
 
                 {valSuccess && (
                   <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm mb-4">
-                    <CheckCircle2 className="w-4 h-4" /> Doğrulama talebi gönderildi!
+                    <CheckCircle2 className="w-4 h-4" /> {t('agentDetail.validationSent')}
                   </div>
                 )}
                 {valError && (
@@ -428,7 +431,7 @@ export default function AgentDetailContent() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Doğrulayıcı Adresi</label>
+                    <label className="block text-sm text-gray-400 mb-1">{t('agentDetail.validatorAddress')}</label>
                     <input
                       type="text"
                       value={valAddress}
@@ -437,7 +440,7 @@ export default function AgentDetailContent() {
                       className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white font-mono"
                     />
                     <p className="text-xs text-gray-600 mt-1.5">
-                      Doğrulamayı yapmasını istediğiniz kişinin Ethereum cüzdan adresi (0x ile başlayan).
+                      {t('agentDetail.validatorHelp')}
                     </p>
                     <button
                       type="button"
@@ -449,7 +452,7 @@ export default function AgentDetailContent() {
                       }}
                       className="mt-2 text-xs text-accent hover:text-accent/80 transition-colors underline underline-offset-2"
                     >
-                      🔗 Kendi cüzdan adresimi kullan (self-validation)
+                      {t('agentDetail.useMyWallet')}
                     </button>
                   </div>
                   <button
@@ -458,14 +461,14 @@ export default function AgentDetailContent() {
                     className="w-full py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {valLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    {valLoading ? 'Gönderiliyor...' : 'Doğrulama Talep Et'}
+                    {valLoading ? t('agentDetail.requestingSending') : t('agentDetail.requestValidation')}
                   </button>
                 </div>
               </div>
 
               {agent.validations.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-3">Validation History</h3>
+                  <h3 className="font-semibold mb-3">{t('agentDetail.validationHistory')}</h3>
                   <div className="space-y-2">
                     {agent.validations.map((val) => (
                       <div key={val.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -481,14 +484,14 @@ export default function AgentDetailContent() {
                             <span className={`text-sm font-medium ${
                               val.status === 'verified' ? 'text-green-400' : val.status === 'failed' ? 'text-red-400' : 'text-yellow-400'
                             }`}>
-                              {val.status === 'verified' ? 'Verified' : val.status === 'failed' ? 'Failed' : 'Pending'}
+                              {val.status === 'verified' ? t('agentDetail.verified') : val.status === 'failed' ? t('agentDetail.failedStatus') : t('agentDetail.pendingStatus')}
                             </span>
                             {val.responseTag && <span className="text-xs text-gray-500">({val.responseTag})</span>}
                           </div>
                           <span className="text-xs text-gray-600 font-mono">{shortenAddr(val.validator)}</span>
                         </div>
                         {val.response !== null && (
-                          <div className="text-xs text-gray-500 mt-1">Response: {val.response} ({val.response >= 50 ? 'Passed' : 'Failed'})</div>
+                          <div className="text-xs text-gray-500 mt-1">{t('agentDetail.response')}: {val.response} ({val.response >= 50 ? t('agentDetail.passed') : t('agentDetail.failedStatus')})</div>
                         )}
                       </div>
                     ))}

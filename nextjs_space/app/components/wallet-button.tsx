@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { connectWallet, switchToArcTestnet, checkNetwork } from '@/lib/blockchain';
+import { useT } from '@/lib/i18n';
 
 interface WalletButtonProps {
   onConnect?: (address: string) => void;
@@ -14,6 +15,7 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   const checkWallet = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -24,7 +26,6 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
       if (accounts?.[0]) {
         setAddress(accounts[0]);
         onConnect?.(accounts[0]);
-        // Direct chain ID check from MetaMask - no caching
         const chainIdHex = await win.ethereum.request({ method: 'eth_chainId' });
         const chainId = parseInt(chainIdHex, 16);
         setIsCorrectNetwork(chainId === 5042002);
@@ -45,10 +46,8 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
       }
     };
     const handleChainChanged = (_chainId: string) => {
-      // Parse the new chain ID directly from the event for immediate update
       const newChainId = typeof _chainId === 'string' ? parseInt(_chainId, 16) : 0;
-      const arcChainId = 5042002;
-      setIsCorrectNetwork(newChainId === arcChainId);
+      setIsCorrectNetwork(newChainId === 5042002);
     };
     win?.ethereum?.on?.('accountsChanged', handleAccountsChanged);
     win?.ethereum?.on?.('chainChanged', handleChainChanged);
@@ -64,14 +63,13 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
     try {
       const win = window as any;
       if (!win?.ethereum) {
-        setError('MetaMask not found. Please install MetaMask.');
+        setError(t('wallet.notFound'));
         return;
       }
       const addr = await connectWallet();
       if (addr) {
         setAddress(addr);
         onConnect?.(addr);
-        // Read chain ID directly from MetaMask
         const chainIdHex = await win.ethereum.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(chainIdHex, 16);
         const isArc = currentChainId === 5042002;
@@ -88,7 +86,7 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
         }
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Connection failed');
+      setError(err?.message ?? t('wallet.connectionFailed'));
     } finally {
       setLoading(false);
     }
@@ -99,7 +97,6 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
     try {
       const switched = await switchToArcTestnet();
       if (switched) {
-        // Small delay to let MetaMask propagate the chain change
         await new Promise((r) => setTimeout(r, 500));
         const correct = await checkNetwork();
         setIsCorrectNetwork(correct);
@@ -123,7 +120,7 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-emerald-500 text-white font-medium shadow-lg shadow-accent/20 hover:shadow-accent/40 transition-shadow disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
-          {loading ? 'Connecting...' : 'Connect Wallet'}
+          {loading ? t('wallet.connecting') : t('wallet.connect')}
         </motion.button>
         <AnimatePresence>
           {error && (
@@ -146,7 +143,7 @@ export default function WalletButton({ onConnect, onDisconnect }: WalletButtonPr
         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium"
       >
         <AlertTriangle className="w-4 h-4" />
-        {loading ? 'Switching...' : 'Switch to Arc Testnet'}
+        {loading ? t('wallet.switching') : t('wallet.switchNetwork')}
       </motion.button>
     );
   }

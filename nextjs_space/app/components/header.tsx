@@ -3,13 +3,16 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession, signOut } from 'next-auth/react';
 import { motion } from 'framer-motion';
-import { TreePine, Sun, Moon, LogOut, LogIn, Wallet, Menu, X, Bot } from 'lucide-react';
+import { TreePine, Sun, Moon, LogOut, LogIn, Wallet, Menu, X, Bot, Globe } from 'lucide-react';
 import Link from 'next/link';
+import { useT, useLangStore } from '@/lib/i18n';
 
 export default function Header() {
   const { data: session } = useSession() || {};
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const t = useT();
+  const { lang, setLang } = useLangStore();
 
   return (
     <motion.header
@@ -27,17 +30,32 @@ export default function Header() {
 
         <nav className="hidden md:flex items-center gap-3">
           <Link href="/" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors">
-            Home
+            {t('nav.home')}
           </Link>
           <Link href="/wishes" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors">
-            All Wishes
+            {t('nav.allWishes')}
           </Link>
           <Link href="/dashboard" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors">
-            Dashboard
+            {t('nav.dashboard')}
           </Link>
           <Link href="/agents" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex items-center gap-1">
-            <Bot className="w-3.5 h-3.5" /> AI Agents
+            <Bot className="w-3.5 h-3.5" /> {t('nav.aiAgents')}
           </Link>
+          {/* Language Toggle */}
+          <div className="flex items-center bg-white/5 rounded-lg overflow-hidden border border-white/10">
+            <button
+              onClick={() => setLang('tr')}
+              className={`px-2 py-1.5 text-xs font-bold transition-colors ${lang === 'tr' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              TR
+            </button>
+            <button
+              onClick={() => setLang('en')}
+              className={`px-2 py-1.5 text-xs font-bold transition-colors ${lang === 'en' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              EN
+            </button>
+          </div>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
@@ -50,11 +68,11 @@ export default function Header() {
               onClick={() => signOut?.()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
             >
-              <LogOut className="w-4 h-4" /> Sign Out
+              <LogOut className="w-4 h-4" /> {t('nav.signOut')}
             </button>
           ) : (
             <Link href="/login" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-accent/10 text-accent hover:bg-accent/20 transition-colors">
-              <LogIn className="w-4 h-4" /> Sign In
+              <LogIn className="w-4 h-4" /> {t('nav.signIn')}
             </Link>
           )}
         </nav>
@@ -70,20 +88,28 @@ export default function Header() {
           animate={{ opacity: 1, height: 'auto' }}
           className="md:hidden glass border-t border-white/5 px-4 py-3 space-y-2"
         >
-          <Link href="/" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">Home</Link>
-          <Link href="/wishes" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">All Wishes</Link>
-          <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">Dashboard</Link>
-          <Link href="/agents" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/10"><Bot className="w-4 h-4" /> AI Agents</Link>
+          {/* Mobile Language Toggle */}
+          <div className="flex items-center gap-2 px-3 py-2">
+            <Globe className="w-4 h-4 text-gray-400" />
+            <div className="flex bg-white/5 rounded-lg overflow-hidden border border-white/10">
+              <button onClick={() => { setLang('tr'); }} className={`px-3 py-1 text-xs font-bold ${lang === 'tr' ? 'bg-accent text-white' : 'text-gray-400'}`}>TR</button>
+              <button onClick={() => { setLang('en'); }} className={`px-3 py-1 text-xs font-bold ${lang === 'en' ? 'bg-accent text-white' : 'text-gray-400'}`}>EN</button>
+            </div>
+          </div>
+          <Link href="/" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">{t('nav.home')}</Link>
+          <Link href="/wishes" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">{t('nav.allWishes')}</Link>
+          <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">{t('nav.dashboard')}</Link>
+          <Link href="/agents" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/10"><Bot className="w-4 h-4" /> {t('nav.aiAgents')}</Link>
           <button onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setMobileOpen(false); }} className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-accent/10">
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} Toggle Theme
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {t('nav.toggleTheme')}
           </button>
           {session?.user ? (
             <button onClick={() => { signOut?.(); setMobileOpen(false); }} className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-red-500 hover:bg-red-500/10">
-              <LogOut className="w-4 h-4" /> Sign Out
+              <LogOut className="w-4 h-4" /> {t('nav.signOut')}
             </button>
           ) : (
             <Link href="/login" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-accent hover:bg-accent/10">
-              <LogIn className="w-4 h-4" /> Sign In
+              <LogIn className="w-4 h-4" /> {t('nav.signIn')}
             </Link>
           )}
         </motion.div>

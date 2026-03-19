@@ -7,6 +7,7 @@ import { AGENT_CATEGORIES } from '@/lib/erc8004';
 import { registerAgent, getAgentIdFromTx } from '@/lib/erc8004-blockchain';
 import { connectWallet, checkNetwork, switchToArcTestnet } from '@/lib/blockchain';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/lib/i18n';
 
 type Step = 'form' | 'signing' | 'confirming' | 'saving' | 'done' | 'error';
 
@@ -18,6 +19,7 @@ export default function RegisterContent() {
   const [txHash, setTxHash] = useState('');
   const [agentTokenId, setAgentTokenId] = useState<number | null>(null);
   const [agentDbId, setAgentDbId] = useState('');
+  const t = useT();
 
   const [form, setForm] = useState({
     name: '',
@@ -47,19 +49,16 @@ export default function RegisterContent() {
   async function handleRegister() {
     setError('');
     try {
-      // 1. Connect wallet
       const addr = await connectWallet();
-      if (!addr) { setError('Please connect your wallet'); return; }
+      if (!addr) { setError(t('register.connectWallet')); return; }
       setWalletAddress(addr);
 
-      // 2. Check network
       const onArc = await checkNetwork();
       if (!onArc) {
         const switched = await switchToArcTestnet();
-        if (!switched) { setError('Please switch to Arc Testnet'); return; }
+        if (!switched) { setError(t('register.switchNetwork')); return; }
       }
 
-      // 3. Build metadata
       const capabilities = form.capabilities.filter((c) => c.trim());
       const metadata = {
         name: form.name,
@@ -69,23 +68,18 @@ export default function RegisterContent() {
         version: form.version,
       };
 
-      // For now, we use a data URI as metadata (in production, upload to IPFS)
       const metadataURI = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
 
-      // 4. Sign & send transaction
       setStep('signing');
       const tx = await registerAgent(metadataURI);
       setTxHash(tx.hash);
 
-      // 5. Wait for confirmation
       setStep('confirming');
       await tx.wait();
 
-      // 6. Get agent token ID from receipt
       const tokenId = await getAgentIdFromTx(tx.hash);
       setAgentTokenId(tokenId);
 
-      // 7. Save to database
       setStep('saving');
       const res = await fetch('/api/agents', {
         method: 'POST',
@@ -110,9 +104,9 @@ export default function RegisterContent() {
     } catch (err: any) {
       console.error('Register error:', err);
       if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
-        setError('Transaction rejected by user');
+        setError(t('register.rejected'));
       } else {
-        setError(err?.message || 'Registration failed');
+        setError(err?.message || t('register.failed'));
       }
       setStep('error');
     }
@@ -127,9 +121,9 @@ export default function RegisterContent() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
             <Bot className="w-8 h-8 text-accent" />
-            Register AI Agent
+            {t('register.title')}
           </h1>
-          <p className="text-gray-400 mb-8">Create an onchain identity for your AI agent using ERC-8004</p>
+          <p className="text-gray-400 mb-8">{t('register.subtitle')}</p>
 
           {step === 'form' || step === 'error' ? (
             <div className="space-y-6">
@@ -140,10 +134,10 @@ export default function RegisterContent() {
               )}
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-300">Agent Name *</label>
+                <label className="block text-sm font-medium mb-1.5 text-gray-300">{t('register.agentName')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. WishTree AI Analyzer"
+                  placeholder={t('register.agentNamePlaceholder')}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-accent/50 text-white"
@@ -151,9 +145,9 @@ export default function RegisterContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-300">Description *</label>
+                <label className="block text-sm font-medium mb-1.5 text-gray-300">{t('register.description')}</label>
                 <textarea
-                  placeholder="What does your AI agent do?"
+                  placeholder={t('register.descriptionPlaceholder')}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
@@ -162,7 +156,7 @@ export default function RegisterContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-300">Agent Type</label>
+                <label className="block text-sm font-medium mb-1.5 text-gray-300">{t('register.agentType')}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {AGENT_CATEGORIES.map((cat) => (
                     <button
@@ -182,13 +176,13 @@ export default function RegisterContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-300">Capabilities</label>
+                <label className="block text-sm font-medium mb-1.5 text-gray-300">{t('register.capabilities')}</label>
                 <div className="space-y-2">
                   {form.capabilities.map((cap, i) => (
                     <div key={i} className="flex gap-2">
                       <input
                         type="text"
-                        placeholder={`Capability ${i + 1}`}
+                        placeholder={`${t('register.capabilityPlaceholder')} ${i + 1}`}
                         value={cap}
                         onChange={(e) => updateCap(i, e.target.value)}
                         className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-accent/50 text-sm text-white"
@@ -202,14 +196,14 @@ export default function RegisterContent() {
                   ))}
                   {form.capabilities.length < 8 && (
                     <button onClick={addCap} className="flex items-center gap-1.5 text-sm text-accent/70 hover:text-accent transition-colors">
-                      <Plus className="w-3.5 h-3.5" /> Add capability
+                      <Plus className="w-3.5 h-3.5" /> {t('register.addCapability')}
                     </button>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-300">Version</label>
+                <label className="block text-sm font-medium mb-1.5 text-gray-300">{t('register.version')}</label>
                 <input
                   type="text"
                   value={form.version}
@@ -223,20 +217,19 @@ export default function RegisterContent() {
                 disabled={!isFormValid}
                 className="w-full py-3.5 bg-accent hover:bg-accent/90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
               >
-                <Bot className="w-5 h-5" /> Register on Arc Testnet
+                <Bot className="w-5 h-5" /> {t('register.submit')}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <p className="text-xs text-gray-500 text-center">
-                Registration mints an ERC-721 identity token via the ERC-8004 IdentityRegistry.
-                Gas is ~0.006 USDC-TESTNET on Arc.
+                {t('register.gasNote')}
               </p>
             </div>
           ) : step === 'done' ? (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-12">
               <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">Agent Registered!</h2>
-              <p className="text-gray-400 mb-4">Your AI agent now has an onchain identity on Arc Testnet</p>
+              <h2 className="text-2xl font-bold mb-2">{t('register.success')}</h2>
+              <p className="text-gray-400 mb-4">{t('register.successSubtitle')}</p>
               {agentTokenId !== null && (
                 <p className="text-accent font-mono mb-2">Token ID: #{agentTokenId}</p>
               )}
@@ -247,7 +240,7 @@ export default function RegisterContent() {
                   rel="noopener noreferrer"
                   className="text-sm text-accent/70 hover:text-accent underline mb-6 inline-block"
                 >
-                  View on ArcScan ↗
+                  {t('register.viewOnArcScan')}
                 </a>
               )}
               <div className="flex gap-3 justify-center mt-6">
@@ -255,13 +248,13 @@ export default function RegisterContent() {
                   onClick={() => router.push(`/agents/${agentDbId}`)}
                   className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors"
                 >
-                  View Agent
+                  {t('register.viewAgent')}
                 </button>
                 <button
                   onClick={() => router.push('/agents')}
                   className="px-6 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl font-medium transition-colors"
                 >
-                  All Agents
+                  {t('register.allAgents')}
                 </button>
               </div>
             </motion.div>
@@ -269,14 +262,14 @@ export default function RegisterContent() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
               <Loader2 className="w-12 h-12 text-accent animate-spin mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">
-                {step === 'signing' && 'Waiting for Wallet Signature...'}
-                {step === 'confirming' && 'Confirming Transaction...'}
-                {step === 'saving' && 'Saving Agent Data...'}
+                {step === 'signing' && t('register.waitingSignature')}
+                {step === 'confirming' && t('register.confirmingTx')}
+                {step === 'saving' && t('register.savingData')}
               </h2>
               <p className="text-gray-400 text-sm">
-                {step === 'signing' && 'Please confirm the transaction in MetaMask'}
-                {step === 'confirming' && 'Waiting for blockchain confirmation'}
-                {step === 'saving' && 'Storing agent information in database'}
+                {step === 'signing' && t('register.confirmMetaMask')}
+                {step === 'confirming' && t('register.waitingBlockchain')}
+                {step === 'saving' && t('register.storingDb')}
               </p>
               {txHash && (
                 <a
@@ -285,7 +278,7 @@ export default function RegisterContent() {
                   rel="noopener noreferrer"
                   className="text-sm text-accent/70 hover:text-accent underline mt-4 inline-block"
                 >
-                  Track on ArcScan ↗
+                  {t('register.trackOnArcScan')}
                 </a>
               )}
             </motion.div>
