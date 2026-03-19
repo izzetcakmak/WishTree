@@ -402,15 +402,22 @@ export default function AgentDetailContent() {
             <div className="space-y-6">
               <div className="p-5 rounded-xl bg-white/5 border border-white/10">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-green-400" /> Request Validation
+                  <Shield className="w-5 h-5 text-green-400" /> Doğrulama Talebi
                 </h3>
-                <p className="text-xs text-gray-500 mb-4">
-                  The agent owner requests validation from a validator. The validator then responds onchain.
-                </p>
+
+                {/* Explanation box */}
+                <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 mb-4">
+                  <p className="text-xs text-blue-300 mb-2 font-medium">ℹ️ Doğrulama Nasıl Çalışır?</p>
+                  <ul className="text-xs text-gray-400 space-y-1.5 list-disc list-inside">
+                    <li>Agent sahibi olarak, güvendiğiniz bir <strong className="text-gray-300">doğrulayıcıya (validator)</strong> doğrulama talebi gönderirsiniz.</li>
+                    <li>Doğrulayıcı, herhangi bir Ethereum cüzdan adresine sahip kişi olabilir — örneğin bir arkadaşınız, bir topluluk üyesi veya kendiniz.</li>
+                    <li>Doğrulayıcı daha sonra zincir üzerinde (onchain) yanıt vererek agent&apos;ınızı onaylar veya reddeder.</li>
+                  </ul>
+                </div>
 
                 {valSuccess && (
                   <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm mb-4">
-                    <CheckCircle2 className="w-4 h-4" /> Validation request sent!
+                    <CheckCircle2 className="w-4 h-4" /> Doğrulama talebi gönderildi!
                   </div>
                 )}
                 {valError && (
@@ -421,7 +428,7 @@ export default function AgentDetailContent() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Validator Address</label>
+                    <label className="block text-sm text-gray-400 mb-1">Doğrulayıcı Adresi</label>
                     <input
                       type="text"
                       value={valAddress}
@@ -429,14 +436,29 @@ export default function AgentDetailContent() {
                       placeholder="0x..."
                       className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white font-mono"
                     />
+                    <p className="text-xs text-gray-600 mt-1.5">
+                      Doğrulamayı yapmasını istediğiniz kişinin Ethereum cüzdan adresi (0x ile başlayan).
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const addr = await connectWallet();
+                          if (addr) setValAddress(addr);
+                        } catch {}
+                      }}
+                      className="mt-2 text-xs text-accent hover:text-accent/80 transition-colors underline underline-offset-2"
+                    >
+                      🔗 Kendi cüzdan adresimi kullan (self-validation)
+                    </button>
                   </div>
                   <button
                     onClick={handleRequestValidation}
-                    disabled={valLoading}
+                    disabled={valLoading || !valAddress.trim()}
                     className="w-full py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {valLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    {valLoading ? 'Sending...' : 'Request Validation'}
+                    {valLoading ? 'Gönderiliyor...' : 'Doğrulama Talep Et'}
                   </button>
                 </div>
               </div>

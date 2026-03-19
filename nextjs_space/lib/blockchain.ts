@@ -77,11 +77,33 @@ export function getContract(signerOrProvider: ethers.Signer | ethers.providers.P
 
 export async function makeAWish(wish: string): Promise<ethers.ContractTransaction> {
   const provider = await getProvider();
-  if (!provider) throw new Error('No provider');
+  if (!provider) throw new Error('MetaMask bulunamadı. Lütfen MetaMask yükleyin.');
+  
+  // Verify network before transaction
+  const onArc = await checkNetwork();
+  if (!onArc) {
+    throw new Error('Lütfen Arc Testnet ağına geçin.');
+  }
+  
   const signer = provider.getSigner();
   const contract = getContract(signer);
-  const tx = await contract.makeAWish(wish, { value: ethers.utils.parseEther(WISH_COST) });
-  return tx;
+  
+  try {
+    const tx = await contract.makeAWish(wish, { value: ethers.utils.parseEther(WISH_COST) });
+    return tx;
+  } catch (err: any) {
+    // Parse common blockchain errors into user-friendly messages
+    if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
+      throw new Error('İşlem reddedildi.');
+    }
+    if (err?.code === 'INSUFFICIENT_FUNDS' || err?.message?.includes?.('insufficient funds')) {
+      throw new Error('Yetersiz bakiye. En az 0.01 ARC gerekiyor.');
+    }
+    if (err?.code === 'UNPREDICTABLE_GAS_LIMIT' || err?.message?.includes?.('gas')) {
+      throw new Error('İşlem başarısız olabilir. Kontrat veya ağ sorunu olabilir.');
+    }
+    throw err;
+  }
 }
 
 async function directRpcCall(method: string, params: any[]): Promise<any> {

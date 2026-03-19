@@ -95,7 +95,7 @@ export async function giveFeedback(
   comment: string = ''
 ): Promise<ethers.ContractTransaction> {
   const provider = await getProvider();
-  if (!provider) throw new Error('No provider');
+  if (!provider) throw new Error('MetaMask bulunamadı.');
   const signer = provider.getSigner();
   const contract = new ethers.Contract(
     ERC8004_CONTRACTS.REPUTATION_REGISTRY,
@@ -103,17 +103,27 @@ export async function giveFeedback(
     signer
   );
   const feedbackHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(tag));
-  const tx = await contract.giveFeedback(
-    agentId,
-    score.toString(),
-    '0', // category
-    tag,
-    comment,
-    '', // metadata
-    '', // uri
-    feedbackHash
-  );
-  return tx;
+  try {
+    const tx = await contract.giveFeedback(
+      agentId,
+      score.toString(),
+      '0', // category
+      tag,
+      comment,
+      '', // metadata
+      '', // uri
+      feedbackHash
+    );
+    return tx;
+  } catch (err: any) {
+    if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
+      throw new Error('İşlem reddedildi.');
+    }
+    if (err?.code === 'UNPREDICTABLE_GAS_LIMIT') {
+      throw new Error('İşlem başarısız olabilir. Kontrat fonksiyon parametreleri uyumsuz olabilir.');
+    }
+    throw err;
+  }
 }
 
 // --- Validation Registry ---
@@ -124,7 +134,7 @@ export async function requestValidation(
   requestURI: string
 ): Promise<{ tx: ethers.ContractTransaction; requestHash: string }> {
   const provider = await getProvider();
-  if (!provider) throw new Error('No provider');
+  if (!provider) throw new Error('MetaMask bulunamadı.');
   const signer = provider.getSigner();
   const contract = new ethers.Contract(
     ERC8004_CONTRACTS.VALIDATION_REGISTRY,
@@ -134,8 +144,18 @@ export async function requestValidation(
   const requestHash = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(`validation_request_agent_${agentId}_${Date.now()}`)
   );
-  const tx = await contract.validationRequest(validatorAddress, agentId, requestURI, requestHash);
-  return { tx, requestHash };
+  try {
+    const tx = await contract.validationRequest(validatorAddress, agentId, requestURI, requestHash);
+    return { tx, requestHash };
+  } catch (err: any) {
+    if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
+      throw new Error('İşlem reddedildi.');
+    }
+    if (err?.code === 'UNPREDICTABLE_GAS_LIMIT') {
+      throw new Error('İşlem başarısız olabilir. Geçersiz doğrulayıcı adresi veya kontrat hatası.');
+    }
+    throw err;
+  }
 }
 
 export async function respondToValidation(
