@@ -249,6 +249,50 @@ const translations = {
   // Score labels
   'score.poor': { tr: 'Kötü', en: 'Poor' },
   'score.excellent': { tr: 'Mükemmel', en: 'Excellent' },
+
+  // Wish Finance
+  'nav.finance': { tr: 'Wish Finance', en: 'Wish Finance' },
+  'finance.title': { tr: 'Wish Finance', en: 'Wish Finance' },
+  'finance.subtitle': { tr: 'Circle App Kits ile USDC gönder, köprüle ve takas et', en: 'Send, bridge and swap USDC with Circle App Kits' },
+  'finance.poweredBy': { tr: 'Circle CCTP V2 & App Kits ile güçlendirilmiştir', en: 'Powered by Circle CCTP V2 & App Kits' },
+
+  // Swap
+  'finance.swap': { tr: 'Takas', en: 'Swap' },
+  'finance.swapDesc': { tr: 'Arc Testnet üzerinde token takası yapın', en: 'Swap tokens on Arc Testnet' },
+  'finance.fromToken': { tr: 'Token\'dan', en: 'From Token' },
+  'finance.toToken': { tr: 'Token\'a', en: 'To Token' },
+  'finance.amount': { tr: 'Miktar', en: 'Amount' },
+  'finance.swapBtn': { tr: 'Takas Et', en: 'Swap' },
+  'finance.swapping': { tr: 'Takas yapılıyor...', en: 'Swapping...' },
+
+  // Bridge
+  'finance.bridge': { tr: 'Köprü', en: 'Bridge' },
+  'finance.bridgeDesc': { tr: 'USDC\'yi zincirler arası köprüleyin', en: 'Bridge USDC across chains' },
+  'finance.fromChain': { tr: 'Kaynak Zincir', en: 'From Chain' },
+  'finance.toChain': { tr: 'Hedef Zincir', en: 'To Chain' },
+  'finance.bridgeBtn': { tr: 'Köprüle', en: 'Bridge' },
+  'finance.bridging': { tr: 'Köprüleniyor...', en: 'Bridging...' },
+  'finance.bridgeAmount': { tr: 'USDC Miktarı', en: 'USDC Amount' },
+
+  // Send
+  'finance.send': { tr: 'Gönder', en: 'Send' },
+  'finance.sendDesc': { tr: 'Arc Testnet üzerinde USDC gönderin', en: 'Send USDC on Arc Testnet' },
+  'finance.recipient': { tr: 'Alıcı Adresi', en: 'Recipient Address' },
+  'finance.sendBtn': { tr: 'Gönder', en: 'Send' },
+  'finance.sending': { tr: 'Gönderiliyor...', en: 'Sending...' },
+  'finance.sendAmount': { tr: 'USDC Miktarı', en: 'USDC Amount' },
+
+  // Finance shared
+  'finance.connectFirst': { tr: 'Önce cüzdanınızı bağlayın', en: 'Connect your wallet first' },
+  'finance.success': { tr: 'İşlem başarılı!', en: 'Transaction successful!' },
+  'finance.error': { tr: 'İşlem başarısız oldu', en: 'Transaction failed' },
+  'finance.txRejected': { tr: 'İşlem reddedildi', en: 'Transaction rejected' },
+  'finance.viewTx': { tr: 'İşlemi görüntüle', en: 'View transaction' },
+  'finance.estimating': { tr: 'Tahmini ücret hesaplanıyor...', en: 'Estimating fees...' },
+  'finance.estimatedFee': { tr: 'Tahmini Ücret', en: 'Estimated Fee' },
+  'finance.noWallet': { tr: 'MetaMask bulunamadı', en: 'MetaMask not found' },
+  'finance.step': { tr: 'Adım', en: 'Step' },
+  'finance.processing': { tr: 'İşleniyor...', en: 'Processing...' },
 } as const;
 
 type TranslationKey = keyof typeof translations;

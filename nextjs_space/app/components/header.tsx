@@ -41,6 +41,9 @@ export default function Header() {
           <Link href="/agents" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex items-center gap-1">
             <Bot className="w-3.5 h-3.5" /> {t('nav.aiAgents')}
           </Link>
+          <Link href="/finance" className="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex items-center gap-1">
+            <Wallet className="w-3.5 h-3.5" /> {t('nav.finance')}
+          </Link>
           {/* Language Toggle */}
           <div className="flex items-center bg-white/5 rounded-lg overflow-hidden border border-white/10">
             <button
@@ -100,6 +103,7 @@ export default function Header() {
           <Link href="/wishes" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">{t('nav.allWishes')}</Link>
           <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-accent/10">{t('nav.dashboard')}</Link>
           <Link href="/agents" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/10"><Bot className="w-4 h-4" /> {t('nav.aiAgents')}</Link>
+          <Link href="/finance" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/10"><Wallet className="w-4 h-4" /> {t('nav.finance')}</Link>
           <button onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setMobileOpen(false); }} className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-accent/10">
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {t('nav.toggleTheme')}
           </button>

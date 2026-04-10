@@ -45,9 +45,9 @@ export default function WishCard({ content, index, walletAddress, sentiment, cat
           <Icon className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm leading-relaxed mb-2">{content ?? ''}</p>
+          <p className="text-sm leading-relaxed mb-2 text-gray-200">{content ?? ''}</p>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono text-gray-500">{shortAddr}</span>
+            <span className="text-[10px] font-mono text-gray-400">{shortAddr}</span>
             {category && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">
                 {category}
@@ -63,7 +63,7 @@ export default function WishCard({ content, index, walletAddress, sentiment, cat
               </span>
             )}
             {createdAt && (
-              <span className="text-[10px] text-gray-600">
+              <span className="text-[10px] text-gray-400">
                 {new Date(createdAt).toLocaleDateString()}
               </span>
             )}
