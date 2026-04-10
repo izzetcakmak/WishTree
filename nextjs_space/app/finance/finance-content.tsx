@@ -20,7 +20,7 @@ const BRIDGE_CHAINS = [
 // Token options for swap
 const SWAP_TOKENS = [
   { value: 'USDC', label: 'USDC', icon: '💲' },
-  { value: 'ETH', label: 'ETH', icon: '⟠' },
+  { value: 'NATIVE', label: 'ARC (Native)', icon: '🌐' },
   { value: 'WETH', label: 'WETH', icon: '🔷' },
   { value: 'USDT', label: 'USDT', icon: '💵' },
 ];
@@ -39,7 +39,7 @@ export default function FinanceContent() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // Swap state
-  const [swapFrom, setSwapFrom] = useState('ETH');
+  const [swapFrom, setSwapFrom] = useState('NATIVE');
   const [swapTo, setSwapTo] = useState('USDC');
   const [swapAmount, setSwapAmount] = useState('');
   const [swapLoading, setSwapLoading] = useState(false);
