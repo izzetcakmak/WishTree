@@ -1,12 +1,13 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, ChevronDown } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, RefreshCw } from 'lucide-react';
 import Header from '../components/header';
 import { useT } from '@/lib/i18n';
-import { connectWallet } from '@/lib/blockchain';
+import { connectWallet, checkNetwork, switchToArcTestnet } from '@/lib/blockchain';
+import { ethers } from 'ethers';
 
-// Chain options for bridge
+// Bridge chain options (testnet)
 const BRIDGE_CHAINS = [
   { value: 'Arc_Testnet', label: 'Arc Testnet', icon: '🌐' },
   { value: 'Ethereum_Sepolia', label: 'Ethereum Sepolia', icon: '⟠' },
@@ -17,12 +18,19 @@ const BRIDGE_CHAINS = [
   { value: 'Optimism_Sepolia', label: 'Optimism Sepolia', icon: '🔴' },
 ];
 
-// Token options for swap
+// Swap tokens on Arc Testnet (USDC is native gas)
 const SWAP_TOKENS = [
-  { value: 'USDC', label: 'USDC (Native Gas)', icon: '💲' },
+  { value: 'USDC', label: 'USDC', icon: '💲' },
+  { value: 'EURC', label: 'EURC', icon: '💶' },
   { value: 'WETH', label: 'WETH', icon: '🔷' },
   { value: 'USDT', label: 'USDT', icon: '💵' },
-  { value: 'WBTC', label: 'WBTC', icon: '🟠' },
+];
+
+// USDC contract on Arc Testnet (standard USDC address)
+const USDC_ADDRESS_ARC = '0x3029e11b2a3fb1Fe0e98956Da3F733bA1e1e2e0a';
+const USDC_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
 ];
 
 type TabType = 'swap' | 'bridge' | 'send';
@@ -37,10 +45,14 @@ export default function FinanceContent() {
   const t = useT();
   const [activeTab, setActiveTab] = useState<TabType>('swap');
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [nativeBalance, setNativeBalance] = useState<string | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [kitKey, setKitKey] = useState<string>('');
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   // Swap state
   const [swapFrom, setSwapFrom] = useState('USDC');
-  const [swapTo, setSwapTo] = useState('WETH');
+  const [swapTo, setSwapTo] = useState('EURC');
   const [swapAmount, setSwapAmount] = useState('');
   const [swapLoading, setSwapLoading] = useState(false);
   const [swapSteps, setSwapSteps] = useState<TxStep[]>([]);
@@ -64,21 +76,64 @@ export default function FinanceContent() {
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendError, setSendError] = useState('');
 
-  const handleConnect = useCallback(async () => {
+  // Fetch kit key on mount
+  useEffect(() => {
+    fetch('/api/finance/config')
+      .then(r => r.json())
+      .then(d => { if (d.kitKey) setKitKey(d.kitKey); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch balances
+  const fetchBalances = useCallback(async (addr: string) => {
+    setBalanceLoading(true);
     try {
-      const addr = await connectWallet();
-      if (addr) setWalletAddress(addr);
-    } catch {
-      // handled in connectWallet
+      const win = window as any;
+      if (!win?.ethereum) return;
+      const provider = new ethers.providers.Web3Provider(win.ethereum, 'any');
+
+      // Native balance (on Arc Testnet, native = USDC for gas)
+      const native = await provider.getBalance(addr);
+      setNativeBalance(parseFloat(ethers.utils.formatEther(native)).toFixed(4));
+
+      // Try to read USDC token balance
+      try {
+        const usdc = new ethers.Contract(USDC_ADDRESS_ARC, USDC_ABI, provider);
+        const decimals = await usdc.decimals();
+        const balance = await usdc.balanceOf(addr);
+        setUsdcBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toFixed(2));
+      } catch {
+        // USDC contract might not exist or different address on testnet
+        setUsdcBalance(null);
+      }
+    } catch (err) {
+      console.error('Balance fetch error:', err);
+    } finally {
+      setBalanceLoading(false);
     }
   }, []);
 
-  // Dynamic imports for Circle SDK (client-side only)
+  const handleConnect = useCallback(async () => {
+    try {
+      const addr = await connectWallet();
+      if (addr) {
+        setWalletAddress(addr);
+        // Ensure on Arc Testnet
+        const onArc = await checkNetwork();
+        if (!onArc) await switchToArcTestnet();
+        fetchBalances(addr);
+      }
+    } catch {
+      // handled
+    }
+  }, [fetchBalances]);
+
+  // Dynamic import for Circle SDK (client-side)
   async function getCircleKit() {
     const { AppKit } = await import('@circle-fin/app-kit');
     const { createViemAdapterFromProvider } = await import('@circle-fin/adapter-viem-v2');
     const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error('MetaMask not found');
+    if (!ethereum) throw new Error(t('finance.noWallet'));
 
     const kit = new AppKit();
     const adapter = await createViemAdapterFromProvider({
@@ -87,44 +142,55 @@ export default function FinanceContent() {
     return { kit, adapter };
   }
 
-  // === SWAP ===
+  // === SWAP (docs: kit.swap with config.kitKey) ===
   async function handleSwap() {
     if (!walletAddress) { setSwapError(t('finance.connectFirst')); return; }
     if (!swapAmount || parseFloat(swapAmount) <= 0) return;
+    if (swapFrom === swapTo) { setSwapError('Select different tokens'); return; }
     setSwapLoading(true); setSwapError(''); setSwapSuccess(false); setSwapSteps([]);
     try {
       const { kit, adapter } = await getCircleKit();
-      setSwapSteps([{ label: 'Initializing swap...', status: 'active' }]);
+      setSwapSteps([
+        { label: 'Initializing swap...', status: 'active' },
+      ]);
 
-      const result = await kit.swap({
-        from: { adapter, chain: 'Arc_Testnet' as any },
-        tokenIn: swapFrom as any,
-        tokenOut: swapTo as any,
+      const swapParams: any = {
+        from: { adapter, chain: 'Arc_Testnet' },
+        tokenIn: swapFrom,
+        tokenOut: swapTo,
         amountIn: swapAmount,
-      });
+      };
+
+      // Add kitKey config if available
+      if (kitKey) {
+        swapParams.config = { kitKey };
+      }
+
+      const result = await kit.swap(swapParams);
 
       const steps: TxStep[] = (result as any)?.steps?.map((s: any, i: number) => ({
         label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transaction'}`,
         status: 'done' as const,
         explorerUrl: s.explorerUrl || undefined,
-      })) || [{ label: 'Swap completed', status: 'done' as const }];
+      })) || [{ label: t('finance.success'), status: 'done' as const }];
 
       setSwapSteps(steps);
       setSwapSuccess(true);
       setSwapAmount('');
+      if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Swap error:', err);
       const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
         ? t('finance.txRejected')
         : (err?.message || t('finance.error'));
       setSwapError(msg);
-      setSwapSteps((prev) => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
+      setSwapSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
       setSwapLoading(false);
     }
   }
 
-  // === BRIDGE ===
+  // === BRIDGE (docs: kit.bridge) ===
   async function handleBridge() {
     if (!walletAddress) { setBridgeError(t('finance.connectFirst')); return; }
     if (!bridgeAmount || parseFloat(bridgeAmount) <= 0) return;
@@ -136,7 +202,7 @@ export default function FinanceContent() {
         { label: 'Approving USDC...', status: 'active' },
         { label: 'Burning on source chain...', status: 'pending' },
         { label: 'Waiting for attestation...', status: 'pending' },
-        { label: 'Minting on destination chain...', status: 'pending' },
+        { label: 'Minting on destination...', status: 'pending' },
       ]);
 
       const result = await kit.bridge({
@@ -149,28 +215,31 @@ export default function FinanceContent() {
         label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transaction'}`,
         status: 'done' as const,
         explorerUrl: s.explorerUrl || undefined,
-      })) || [{ label: 'Bridge completed', status: 'done' as const }];
+      })) || [{ label: t('finance.success'), status: 'done' as const }];
 
       setBridgeSteps(steps);
       setBridgeSuccess(true);
       setBridgeAmount('');
+      if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Bridge error:', err);
       const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
         ? t('finance.txRejected')
         : (err?.message || t('finance.error'));
       setBridgeError(msg);
-      setBridgeSteps((prev) => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
+      setBridgeSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
       setBridgeLoading(false);
     }
   }
 
-  // === SEND ===
+  // === SEND (docs: kit.send) ===
   async function handleSend() {
     if (!walletAddress) { setSendError(t('finance.connectFirst')); return; }
     if (!sendAmount || parseFloat(sendAmount) <= 0) return;
-    if (!sendRecipient || !sendRecipient.startsWith('0x')) { setSendError('Invalid recipient address'); return; }
+    if (!sendRecipient || !sendRecipient.startsWith('0x') || sendRecipient.length !== 42) {
+      setSendError('Invalid recipient address'); return;
+    }
     setSendLoading(true); setSendError(''); setSendSuccess(false); setSendSteps([]);
     try {
       const { kit, adapter } = await getCircleKit();
@@ -187,19 +256,20 @@ export default function FinanceContent() {
         label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transfer'}`,
         status: 'done' as const,
         explorerUrl: s.explorerUrl || undefined,
-      })) || [{ label: 'Send completed', status: 'done' as const }];
+      })) || [{ label: t('finance.success'), status: 'done' as const }];
 
       setSendSteps(steps);
       setSendSuccess(true);
       setSendAmount('');
       setSendRecipient('');
+      if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Send error:', err);
       const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
         ? t('finance.txRejected')
         : (err?.message || t('finance.error'));
       setSendError(msg);
-      setSendSteps((prev) => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
+      setSendSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
       setSendLoading(false);
     }
@@ -256,8 +326,8 @@ export default function FinanceContent() {
             <p className="text-gray-400 text-sm">{t('finance.subtitle')}</p>
           </div>
 
-          {/* Wallet Connect */}
-          {!walletAddress && (
+          {/* Wallet Connect / Balance */}
+          {!walletAddress ? (
             <div className="mb-6">
               <button
                 onClick={handleConnect}
@@ -267,13 +337,31 @@ export default function FinanceContent() {
                 {t('finance.connectFirst')}
               </button>
             </div>
-          )}
-
-          {walletAddress && (
-            <div className="mb-6 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-sm">
-              <Wallet className="w-4 h-4 text-accent" />
-              <span className="text-gray-400">Connected:</span>
-              <span className="font-mono text-xs text-white">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
+          ) : (
+            <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-accent" />
+                  <span className="font-mono text-sm text-white">{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
+                </div>
+                <button
+                  onClick={() => fetchBalances(walletAddress)}
+                  disabled={balanceLoading}
+                  className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+                >
+                  <RefreshCw className={`w-3 h-3 ${balanceLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="text-xs text-gray-500 mb-1">Native (Gas)</div>
+                  <div className="text-lg font-bold text-white">{nativeBalance ?? '...'}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="text-xs text-gray-500 mb-1">USDC Token</div>
+                  <div className="text-lg font-bold text-green-400">{usdcBalance ?? '...'}</div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -308,70 +396,42 @@ export default function FinanceContent() {
                 </div>
               )}
               {swapError && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4">
-                  <AlertCircle className="w-4 h-4" /> {swapError}
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4 break-words">
+                  <div className="flex items-start gap-2"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{swapError}</span></div>
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.fromToken')}</label>
-                  <select
-                    value={swapFrom}
-                    onChange={(e) => setSwapFrom(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300"
-                  >
-                    {SWAP_TOKENS.map(tk => (
-                      <option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>
-                    ))}
+                  <select value={swapFrom} onChange={(e) => setSwapFrom(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
+                    {SWAP_TOKENS.map(tk => (<option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>))}
                   </select>
                 </div>
 
                 <div className="flex justify-center">
-                  <button
-                    onClick={() => { const tmp = swapFrom; setSwapFrom(swapTo); setSwapTo(tmp); }}
-                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                  >
+                  <button onClick={() => { const tmp = swapFrom; setSwapFrom(swapTo); setSwapTo(tmp); }} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
                     <ArrowDownUp className="w-4 h-4 text-purple-400" />
                   </button>
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.toToken')}</label>
-                  <select
-                    value={swapTo}
-                    onChange={(e) => setSwapTo(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300"
-                  >
-                    {SWAP_TOKENS.map(tk => (
-                      <option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>
-                    ))}
+                  <select value={swapTo} onChange={(e) => setSwapTo(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
+                    {SWAP_TOKENS.map(tk => (<option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.amount')}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={swapAmount}
-                    onChange={(e) => setSwapAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white"
-                  />
+                  <input type="number" step="0.01" min="0" value={swapAmount} onChange={(e) => setSwapAmount(e.target.value)} placeholder="0.00" className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white" />
                 </div>
 
-                <button
-                  onClick={handleSwap}
-                  disabled={swapLoading || !swapAmount}
-                  className="w-full py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
+                <button onClick={handleSwap} disabled={swapLoading || !swapAmount || swapFrom === swapTo} className="w-full py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                   {swapLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownUp className="w-4 h-4" />}
                   {swapLoading ? t('finance.swapping') : t('finance.swapBtn')}
                 </button>
               </div>
-
               {renderSteps(swapSteps)}
             </motion.div>
           )}
@@ -391,70 +451,42 @@ export default function FinanceContent() {
                 </div>
               )}
               {bridgeError && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4">
-                  <AlertCircle className="w-4 h-4" /> {bridgeError}
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4 break-words">
+                  <div className="flex items-start gap-2"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{bridgeError}</span></div>
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.fromChain')}</label>
-                  <select
-                    value={bridgeFrom}
-                    onChange={(e) => setBridgeFrom(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300"
-                  >
-                    {BRIDGE_CHAINS.map(c => (
-                      <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
-                    ))}
+                  <select value={bridgeFrom} onChange={(e) => setBridgeFrom(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
+                    {BRIDGE_CHAINS.map(c => (<option key={c.value} value={c.value}>{c.icon} {c.label}</option>))}
                   </select>
                 </div>
 
                 <div className="flex justify-center">
-                  <button
-                    onClick={() => { const tmp = bridgeFrom; setBridgeFrom(bridgeTo); setBridgeTo(tmp); }}
-                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                  >
+                  <button onClick={() => { const tmp = bridgeFrom; setBridgeFrom(bridgeTo); setBridgeTo(tmp); }} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
                     <ArrowLeftRight className="w-4 h-4 text-blue-400" />
                   </button>
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.toChain')}</label>
-                  <select
-                    value={bridgeTo}
-                    onChange={(e) => setBridgeTo(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300"
-                  >
-                    {BRIDGE_CHAINS.map(c => (
-                      <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
-                    ))}
+                  <select value={bridgeTo} onChange={(e) => setBridgeTo(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
+                    {BRIDGE_CHAINS.map(c => (<option key={c.value} value={c.value}>{c.icon} {c.label}</option>))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.bridgeAmount')}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={bridgeAmount}
-                    onChange={(e) => setBridgeAmount(e.target.value)}
-                    placeholder="0.00 USDC"
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white"
-                  />
+                  <input type="number" step="0.01" min="0" value={bridgeAmount} onChange={(e) => setBridgeAmount(e.target.value)} placeholder="0.00 USDC" className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white" />
                 </div>
 
-                <button
-                  onClick={handleBridge}
-                  disabled={bridgeLoading || !bridgeAmount}
-                  className="w-full py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
+                <button onClick={handleBridge} disabled={bridgeLoading || !bridgeAmount || bridgeFrom === bridgeTo} className="w-full py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                   {bridgeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
                   {bridgeLoading ? t('finance.bridging') : t('finance.bridgeBtn')}
                 </button>
               </div>
-
               {renderSteps(bridgeSteps)}
             </motion.div>
           )}
@@ -474,46 +506,27 @@ export default function FinanceContent() {
                 </div>
               )}
               {sendError && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4">
-                  <AlertCircle className="w-4 h-4" /> {sendError}
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4 break-words">
+                  <div className="flex items-start gap-2"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{sendError}</span></div>
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.recipient')}</label>
-                  <input
-                    type="text"
-                    value={sendRecipient}
-                    onChange={(e) => setSendRecipient(e.target.value)}
-                    placeholder="0x..."
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white font-mono"
-                  />
+                  <input type="text" value={sendRecipient} onChange={(e) => setSendRecipient(e.target.value)} placeholder="0x..." className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white font-mono" />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.sendAmount')}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={sendAmount}
-                    onChange={(e) => setSendAmount(e.target.value)}
-                    placeholder="0.00 USDC"
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white"
-                  />
+                  <input type="number" step="0.01" min="0" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} placeholder="0.00 USDC" className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white" />
                 </div>
 
-                <button
-                  onClick={handleSend}
-                  disabled={sendLoading || !sendAmount || !sendRecipient}
-                  className="w-full py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
+                <button onClick={handleSend} disabled={sendLoading || !sendAmount || !sendRecipient} className="w-full py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                   {sendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {sendLoading ? t('finance.sending') : t('finance.sendBtn')}
                 </button>
               </div>
-
               {renderSteps(sendSteps)}
             </motion.div>
           )}
