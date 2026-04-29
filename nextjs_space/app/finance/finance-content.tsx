@@ -413,19 +413,49 @@ export default function FinanceContent() {
         throw new Error('No transaction instructions returned from swap API');
       }
 
-      // Execute each instruction (approve + swap)
-      for (let i = 0; i < execParams.instructions.length; i++) {
+      // ERC-20 approve ABI fragment
+      const erc20Iface = new eth.utils.Interface([
+        'function approve(address spender, uint256 amount) returns (bool)',
+      ]);
+
+      // Each instruction may need an ERC-20 approve first, then execution
+      const totalSteps = execParams.instructions.length;
+      let stepCounter = 0;
+
+      for (let i = 0; i < totalSteps; i++) {
         const instr = execParams.instructions[i];
+
+        // If the instruction requires a token approval, do it first
+        if (instr.amountToApprove && instr.tokenIn && instr.tokenIn !== '0x0000000000000000000000000000000000000000') {
+          const approveAmount = eth.BigNumber.from(instr.amountToApprove);
+          if (approveAmount.gt(0)) {
+            stepCounter++;
+            setSwapSteps(prev => prev.map((s, idx) =>
+              idx === 1 ? { ...s, label: `Approving ${instr.tokenIn === tokenInDef.address ? swapFrom : swapTo} (step ${stepCounter})...`, status: 'active' } : s
+            ));
+
+            const approveData = erc20Iface.encodeFunctionData('approve', [instr.target, approveAmount]);
+            const approveTx = await signer.sendTransaction({
+              to: instr.tokenIn,
+              data: approveData,
+              value: '0x0',
+            });
+            await approveTx.wait();
+          }
+        }
+
+        // Execute the actual instruction
+        stepCounter++;
+        setSwapSteps(prev => prev.map((s, idx) =>
+          idx === 1 ? { ...s, label: `TX ${i + 1}/${totalSteps} sent...`, status: 'active' } : s
+        ));
+
         const tx = await signer.sendTransaction({
           to: instr.target,
           data: instr.data,
           value: instr.value || '0x0',
           gasLimit: swapData.transaction?.gasLimit || undefined,
         });
-
-        setSwapSteps(prev => prev.map((s, idx) =>
-          idx === 1 ? { ...s, label: `TX ${i + 1}/${execParams.instructions.length} sent...`, status: 'active' } : s
-        ));
 
         await tx.wait();
       }
