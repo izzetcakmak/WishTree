@@ -18,12 +18,10 @@ const BRIDGE_CHAINS = [
   { value: 'Optimism_Sepolia', label: 'Optimism Sepolia', icon: '🔴' },
 ];
 
-// Swap tokens on Arc Testnet (USDC is native gas)
+// Swap tokens on Arc Testnet — only USDC & EURC are supported by Circle SDK
 const SWAP_TOKENS = [
-  { value: 'USDC', label: 'USDC', icon: '💲' },
-  { value: 'EURC', label: 'EURC', icon: '💶' },
-  { value: 'WETH', label: 'WETH', icon: '🔷' },
-  { value: 'USDT', label: 'USDT', icon: '💵' },
+  { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000' },
+  { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' },
 ];
 
 // USDC contract on Arc Testnet (standard USDC address)
@@ -356,36 +354,87 @@ export default function FinanceContent() {
     return { kit, adapter };
   }
 
-  // === SWAP (docs: kit.swap with config.kitKey) ===
+  // === SWAP via server-side proxy (avoids browser fetch issues) ===
   async function handleSwap() {
     if (!walletAddress) { setSwapError(t('finance.connectFirst')); return; }
     if (!swapAmount || parseFloat(swapAmount) <= 0) return;
     if (swapFrom === swapTo) { setSwapError('Select different tokens'); return; }
-    if (!kitKey) { setSwapError('Kit Key not loaded. Please refresh the page.'); return; }
     setSwapLoading(true); setSwapError(''); setSwapSuccess(false); setSwapSteps([]);
     try {
-      const { kit, adapter } = await getCircleKit();
+      const tokenInDef = SWAP_TOKENS.find(tk => tk.value === swapFrom);
+      const tokenOutDef = SWAP_TOKENS.find(tk => tk.value === swapTo);
+      if (!tokenInDef || !tokenOutDef) throw new Error('Token not found');
+
+      // Convert human amount to base units (6 decimals)
+      const amountBase = Math.floor(parseFloat(swapAmount) * 1_000_000).toString();
+
       setSwapSteps([
-        { label: 'Initializing swap...', status: 'active' },
+        { label: 'Getting swap quote from Circle...', status: 'active' },
+        { label: 'Waiting for wallet signature...', status: 'pending' },
+        { label: 'Confirming transaction...', status: 'pending' },
       ]);
 
-      console.log('[WishFinance] Swap params:', { chain: 'Arc_Testnet', tokenIn: swapFrom, tokenOut: swapTo, amountIn: swapAmount, hasKitKey: !!kitKey });
-
-      const result = await kit.swap({
-        from: { adapter, chain: 'Arc_Testnet' as any },
-        tokenIn: swapFrom,
-        tokenOut: swapTo,
-        amountIn: swapAmount,
-        config: { kitKey },
+      // Step 1: Get swap transaction via server-side proxy
+      const proxyRes = await fetch('/api/finance/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'swap',
+          tokenInAddress: tokenInDef.address,
+          tokenInChain: 'Arc_Testnet',
+          tokenOutAddress: tokenOutDef.address,
+          tokenOutChain: 'Arc_Testnet',
+          fromAddress: walletAddress,
+          toAddress: walletAddress,
+          amount: amountBase,
+        }),
       });
 
-      const steps: TxStep[] = (result as any)?.steps?.map((s: any, i: number) => ({
-        label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transaction'}`,
-        status: 'done' as const,
-        explorerUrl: s.explorerUrl || undefined,
-      })) || [{ label: t('finance.success'), status: 'done' as const }];
+      const swapData = await proxyRes.json();
+      if (!proxyRes.ok) {
+        throw new Error(swapData?.error || swapData?.details?.message || 'Swap API error');
+      }
 
-      setSwapSteps(steps);
+      setSwapSteps([
+        { label: `Quote: ~${((parseInt(swapData.estimatedAmount || '0') / 1_000_000)).toFixed(4)} ${swapTo}`, status: 'done' },
+        { label: 'Waiting for wallet signature...', status: 'active' },
+        { label: 'Confirming transaction...', status: 'pending' },
+      ]);
+
+      // Step 2: Execute transaction via MetaMask
+      const win = window as any;
+      if (!win?.ethereum) throw new Error(t('finance.noWallet'));
+      const { ethers: eth } = await import('ethers');
+      const provider = new eth.providers.Web3Provider(win.ethereum, 'any');
+      const signer = provider.getSigner();
+      const execParams = swapData.transaction?.executionParams;
+
+      if (!execParams?.instructions?.length) {
+        throw new Error('No transaction instructions returned from swap API');
+      }
+
+      // Execute each instruction (approve + swap)
+      for (let i = 0; i < execParams.instructions.length; i++) {
+        const instr = execParams.instructions[i];
+        const tx = await signer.sendTransaction({
+          to: instr.target,
+          data: instr.data,
+          value: instr.value || '0x0',
+          gasLimit: swapData.transaction?.gasLimit || undefined,
+        });
+
+        setSwapSteps(prev => prev.map((s, idx) =>
+          idx === 1 ? { ...s, label: `TX ${i + 1}/${execParams.instructions.length} sent...`, status: 'active' } : s
+        ));
+
+        await tx.wait();
+      }
+
+      setSwapSteps([
+        { label: `Swapped ${swapAmount} ${swapFrom}`, status: 'done' },
+        { label: `Received ~${((parseInt(swapData.estimatedAmount || '0') / 1_000_000)).toFixed(4)} ${swapTo}`, status: 'done' },
+        { label: t('finance.success'), status: 'done' },
+      ]);
       setSwapSuccess(true);
       setSwapAmount('');
       if (walletAddress) fetchBalances(walletAddress);
@@ -394,8 +443,6 @@ export default function FinanceContent() {
       let msg = err?.message || t('finance.error');
       if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
         msg = t('finance.txRejected');
-      } else if (msg.includes('Failed to fetch') || msg.includes('Maximum retry')) {
-        msg = 'Circle Swap API unreachable. This may be a temporary issue — please try again in a few minutes. Ensure your Kit Key is valid at developers.circle.com.';
       }
       setSwapError(msg);
       setSwapSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
