@@ -36,6 +36,7 @@
     "@azure/storage-blob": "^12.0.0",
     "@circle-fin/adapter-viem-v2": "^1.8.2",
     "@circle-fin/app-kit": "^1.3.0",
+    "@circle-fin/unified-balance-kit": "^1.0.1",
     "@floating-ui/react": "0.26.0",
     "@headlessui/react": "1.7.18",
     "@hookform/resolvers": "3.9.0",

@@ -293,6 +293,28 @@ const translations = {
   'finance.noWallet': { tr: 'MetaMask bulunamadı', en: 'MetaMask not found' },
   'finance.step': { tr: 'Adım', en: 'Step' },
   'finance.processing': { tr: 'İşleniyor...', en: 'Processing...' },
+
+  // Unified Balance
+  'finance.unified': { tr: 'Birleşik Bakiye', en: 'Unified Balance' },
+  'finance.unifiedDesc': { tr: 'Tüm zincirlerdeki USDC bakiyenizi tek bir yerden yönetin', en: 'Manage your USDC balance across all chains in one place' },
+  'finance.totalBalance': { tr: 'Toplam Birleşik Bakiye', en: 'Total Unified Balance' },
+  'finance.pendingBalance': { tr: 'Beklemede', en: 'Pending' },
+  'finance.perChain': { tr: 'Zincir Bazında Dağılım', en: 'Per-Chain Breakdown' },
+  'finance.refresh': { tr: 'Yenile', en: 'Refresh' },
+  'finance.deposit': { tr: 'Yatır', en: 'Deposit' },
+  'finance.depositDesc': { tr: 'Bir zincirden USDC yatırın, birleşik bakiyenize eklenir', en: 'Deposit USDC from a chain, credited to your unified balance' },
+  'finance.depositChain': { tr: 'Yatırılacak Zincir', en: 'Deposit Chain' },
+  'finance.depositBtn': { tr: 'USDC Yatır', en: 'Deposit USDC' },
+  'finance.depositing': { tr: 'Yatırılıyor...', en: 'Depositing...' },
+  'finance.spend': { tr: 'Harcama Yap', en: 'Spend' },
+  'finance.spendDesc': { tr: 'Birleşik bakiyenizden herhangi bir zincirde köprüsüz harcayın', en: 'Spend from your unified balance to any chain — no bridging needed' },
+  'finance.spendChain': { tr: 'Hedef Zincir', en: 'Destination Chain' },
+  'finance.spendBtn': { tr: 'Harca', en: 'Spend' },
+  'finance.spending': { tr: 'Harcanıyor...', en: 'Spending...' },
+  'finance.estimatedGas': { tr: 'Tahmini Gas', en: 'Est. Gas' },
+  'finance.estimatedProtocol': { tr: 'Protokol Ücreti', en: 'Protocol Fee' },
+  'finance.noBalance': { tr: 'Henüz birleşik bakiyeniz yok. Önce yatırın.', en: 'No unified balance yet. Make a deposit first.' },
+  'finance.estimate': { tr: 'Tahmini Hesapla', en: 'Estimate' },
 } as const;
 
 type TranslationKey = keyof typeof translations;
