@@ -307,9 +307,13 @@ export default function FinanceContent() {
       setTimeout(() => fetchUnifiedBalances(), 2000);
     } catch (err: any) {
       console.error('Spend error:', err);
-      const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
-        ? t('finance.txRejected')
-        : (err?.message || t('finance.error'));
+      let msg = err?.message || t('finance.error');
+      if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+        msg = t('finance.txRejected');
+      } else if (msg.includes('Insufficient') || msg.includes('insufficient')) {
+        // Clean up long decimal numbers for readability
+        msg = msg.replace(/(\d+\.\d{4})\d+/g, '$1');
+      }
       setSpendError(msg);
       setSpendSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
