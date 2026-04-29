@@ -45,25 +45,25 @@ export default function WishCard({ content, index, walletAddress, sentiment, cat
           <Icon className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm leading-relaxed mb-2 text-gray-200">{content ?? ''}</p>
+          <p className="text-sm leading-relaxed mb-2 text-white/90">{content ?? ''}</p>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono text-gray-400">{shortAddr}</span>
+            <span className="text-[10px] font-mono text-gray-300">{shortAddr}</span>
             {category && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-medium">
                 {category}
               </span>
             )}
             {sentiment && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                sentiment === 'positive' ? 'bg-green-500/10 text-green-400' :
-                sentiment === 'negative' ? 'bg-red-500/10 text-red-400' :
-                'bg-yellow-500/10 text-yellow-400'
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                sentiment === 'positive' ? 'bg-green-500/20 text-green-300' :
+                sentiment === 'negative' ? 'bg-red-500/20 text-red-300' :
+                'bg-yellow-500/20 text-yellow-300'
               }`}>
                 {sentiment}
               </span>
             )}
             {createdAt && (
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-gray-300">
                 {new Date(createdAt).toLocaleDateString()}
               </span>
             )}

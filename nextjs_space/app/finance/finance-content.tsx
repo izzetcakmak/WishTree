@@ -357,6 +357,7 @@ export default function FinanceContent() {
     if (!walletAddress) { setSwapError(t('finance.connectFirst')); return; }
     if (!swapAmount || parseFloat(swapAmount) <= 0) return;
     if (swapFrom === swapTo) { setSwapError('Select different tokens'); return; }
+    if (!kitKey) { setSwapError('Kit Key not loaded. Please refresh the page.'); return; }
     setSwapLoading(true); setSwapError(''); setSwapSuccess(false); setSwapSteps([]);
     try {
       const { kit, adapter } = await getCircleKit();
@@ -364,19 +365,15 @@ export default function FinanceContent() {
         { label: 'Initializing swap...', status: 'active' },
       ]);
 
-      const swapParams: any = {
-        from: { adapter, chain: 'Arc_Testnet' },
+      console.log('[WishFinance] Swap params:', { chain: 'Arc_Testnet', tokenIn: swapFrom, tokenOut: swapTo, amountIn: swapAmount, hasKitKey: !!kitKey });
+
+      const result = await kit.swap({
+        from: { adapter, chain: 'Arc_Testnet' as any },
         tokenIn: swapFrom,
         tokenOut: swapTo,
         amountIn: swapAmount,
-      };
-
-      // Add kitKey config if available
-      if (kitKey) {
-        swapParams.config = { kitKey };
-      }
-
-      const result = await kit.swap(swapParams);
+        config: { kitKey },
+      });
 
       const steps: TxStep[] = (result as any)?.steps?.map((s: any, i: number) => ({
         label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transaction'}`,
@@ -390,9 +387,12 @@ export default function FinanceContent() {
       if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Swap error:', err);
-      const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
-        ? t('finance.txRejected')
-        : (err?.message || t('finance.error'));
+      let msg = err?.message || t('finance.error');
+      if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+        msg = t('finance.txRejected');
+      } else if (msg.includes('Failed to fetch') || msg.includes('Maximum retry')) {
+        msg = 'Circle Swap API unreachable. This may be a temporary issue — please try again in a few minutes. Ensure your Kit Key is valid at developers.circle.com.';
+      }
       setSwapError(msg);
       setSwapSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
