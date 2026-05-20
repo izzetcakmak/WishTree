@@ -223,8 +223,10 @@ export default function WishesContent() {
                 index={i}
                 walletAddress={w?.walletAddress}
                 sentiment={w?.analysis?.sentiment}
-                category={w?.analysis?.category}
+                category={w?.analysis?.category ?? w?.category}
                 createdAt={w?.createdAt}
+                wishId={w?.id}
+                totalBlessed={w?.totalBlessed}
               />
             ))}
           </div>

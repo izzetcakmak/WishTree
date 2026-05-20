@@ -80,12 +80,20 @@ export default function AgentsContent() {
               </h1>
               <p className="text-gray-400 mt-1">{t('agents.subtitle')}</p>
             </div>
-            <Link
-              href="/agents/register"
-              className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" /> {t('agents.register')}
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                href="/agents/new"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium transition-colors text-sm"
+              >
+                <Bot className="w-4 h-4" /> {t('agent.newMatchmaker')}
+              </Link>
+              <Link
+                href="/agents/register"
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" /> {t('agents.register')}
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">

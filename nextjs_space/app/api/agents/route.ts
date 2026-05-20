@@ -30,11 +30,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, description, agentType, capabilities, version, metadataURI, ownerAddress, txHash, agentTokenId } = body;
+    const { name, description, agentType, capabilities, version, metadataURI, ownerAddress, txHash, agentTokenId, criteria, monthlyBudget } = body;
 
     if (!name || !description || !agentType || !ownerAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Determine initial status based on agent type
+    const isMatchmaker = agentType === 'matchmaker';
+    const initialStatus = txHash ? 'registered' : (isMatchmaker ? 'active' : 'pending');
 
     const agent = await prisma.agent.create({
       data: {
@@ -47,7 +51,12 @@ export async function POST(req: NextRequest) {
         ownerAddress: ownerAddress.toLowerCase(),
         txHash: txHash || null,
         agentTokenId: agentTokenId ?? null,
-        status: txHash ? 'registered' : 'pending',
+        status: initialStatus,
+        // Matchmaker agent fields
+        criteria: criteria || null,
+        monthlyBudget: monthlyBudget ? Number(monthlyBudget) : 0,
+        monthlySpent: 0,
+        monthResetAt: isMatchmaker ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1) : null,
       },
     });
 

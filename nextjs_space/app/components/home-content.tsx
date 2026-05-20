@@ -7,6 +7,7 @@ import WalletButton from './wallet-button';
 import WishForm from './wish-form';
 import WishCard from './wish-card';
 import WishTreeVisual from './wish-tree-visual';
+import PhoneOnboardQR from '@/components/onboard/PhoneOnboardQR';
 import { getAllWishes } from '@/lib/blockchain';
 import { useT } from '@/lib/i18n';
 
@@ -140,6 +141,11 @@ export default function HomeContent() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
+            {/* WhatsApp Onboarding */}
+            <div className="mb-10">
+              <PhoneOnboardQR />
+            </div>
+
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent" />
               {t('home.recentWishes')}
@@ -159,8 +165,10 @@ export default function HomeContent() {
                     index={i}
                     walletAddress={w?.walletAddress}
                     sentiment={w?.analysis?.sentiment}
-                    category={w?.analysis?.category}
+                    category={w?.analysis?.category ?? w?.category}
                     createdAt={w?.createdAt}
+                    wishId={w?.id}
+                    totalBlessed={w?.totalBlessed}
                   />
                 ))}
               </div>

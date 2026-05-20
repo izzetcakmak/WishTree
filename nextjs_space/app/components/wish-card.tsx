@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Sparkles, TreePine, Heart, Briefcase, GraduationCap, Coins, Plane, Users, Star, Activity } from 'lucide-react';
+import { Sparkles, TreePine, Heart, Briefcase, GraduationCap, Coins, Plane, Users, Star, Activity, DollarSign } from 'lucide-react';
+import BlessButton from '@/components/bless/BlessButton';
 
 interface WishCardProps {
   content: string;
@@ -9,6 +10,8 @@ interface WishCardProps {
   sentiment?: string | null;
   category?: string | null;
   createdAt?: string;
+  wishId?: string;
+  totalBlessed?: number;
 }
 
 const categoryIcons: Record<string, any> = {
@@ -22,7 +25,7 @@ const categoryIcons: Record<string, any> = {
   spiritual: Sparkles,
 };
 
-export default function WishCard({ content, index, walletAddress, sentiment, category, createdAt }: WishCardProps) {
+export default function WishCard({ content, index, walletAddress, sentiment, category, createdAt, wishId, totalBlessed }: WishCardProps) {
   const Icon = categoryIcons?.[category ?? ''] ?? Star;
   const shortAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Anonymous';
 
@@ -67,7 +70,18 @@ export default function WishCard({ content, index, walletAddress, sentiment, cat
                 {new Date(createdAt).toLocaleDateString()}
               </span>
             )}
+            {(totalBlessed ?? 0) > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-medium flex items-center gap-0.5">
+                <DollarSign className="w-2.5 h-2.5" /> {totalBlessed} USDC
+              </span>
+            )}
           </div>
+          {/* Bless Button */}
+          {wishId && (
+            <div className="mt-2">
+              <BlessButton wishId={wishId} wishContent={content} />
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

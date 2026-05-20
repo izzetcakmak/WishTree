@@ -315,6 +315,58 @@ const translations = {
   'finance.estimatedProtocol': { tr: 'Protokol Ücreti', en: 'Protocol Fee' },
   'finance.noBalance': { tr: 'Henüz birleşik bakiyeniz yok. Önce yatırın.', en: 'No unified balance yet. Make a deposit first.' },
   'finance.estimate': { tr: 'Tahmini Hesapla', en: 'Estimate' },
+
+  // Blessing
+  'bless.button': { tr: 'Bless Et', en: 'Bless' },
+  'bless.title': { tr: 'Dileğe Destek Ol', en: 'Bless This Wish' },
+  'bless.subtitle': { tr: 'USDC ile mikro-bağış gönder', en: 'Send a micro-donation with USDC' },
+  'bless.customAmount': { tr: 'Özel miktar...', en: 'Custom amount...' },
+  'bless.messagePlaceholder': { tr: 'Bir mesaj ekle (isteğe bağlı)...', en: 'Add a message (optional)...' },
+  'bless.send': { tr: 'Gönder', en: 'Send' },
+  'bless.approving': { tr: 'USDC onaylanıyor...', en: 'Approving USDC...' },
+  'bless.confirmInWallet': { tr: 'Cüzdanınızda onaylayın', en: 'Confirm in your wallet' },
+  'bless.sending': { tr: 'Blessing gönderiliyor...', en: 'Sending blessing...' },
+  'bless.success': { tr: 'Blessing başarılı!', en: 'Blessing sent!' },
+  'bless.viewTx': { tr: 'İşlemi görüntüle', en: 'View transaction' },
+  'bless.close': { tr: 'Kapat', en: 'Close' },
+  'bless.retry': { tr: 'Tekrar Dene', en: 'Try Again' },
+  'bless.invalidAmount': { tr: 'Geçerli bir miktar girin', en: 'Enter a valid amount' },
+  'bless.contractNotDeployed': { tr: 'BlessingPool kontratı henüz deploy edilmedi', en: 'BlessingPool contract not deployed yet' },
+  'bless.noWallet': { tr: 'MetaMask bulunamadı', en: 'MetaMask not found' },
+  'bless.noBlessings': { tr: 'Henüz blessing yok. İlk sen destek ol!', en: 'No blessings yet. Be the first to bless!' },
+  'bless.totalBlessed': { tr: 'Toplam Destek', en: 'Total Blessed' },
+
+  // Phone Onboarding
+  'onboard.title': { tr: 'WhatsApp ile Dilek Tut', en: 'Make a Wish via WhatsApp' },
+  'onboard.subtitle': { tr: 'Cüzdan gerekmez! Telefonundan dilek tut, NFT kazan.', en: 'No wallet needed! Make a wish from your phone, earn an NFT.' },
+  'onboard.openWhatsApp': { tr: 'WhatsApp\'ı Aç', en: 'Open WhatsApp' },
+  'onboard.step1': { tr: 'QR kodu tara veya butona tıkla', en: 'Scan the QR code or tap the button' },
+  'onboard.step2': { tr: 'Dileğini mesaj olarak yaz', en: 'Type your wish as a message' },
+  'onboard.step3': { tr: 'NFT otomatik oluşturulur, bağışlar telefonuna gelir!', en: 'Your NFT is created automatically, donations come to your phone!' },
+
+  // Agent Matchmaker
+  'agent.createTitle': { tr: 'AI Yardım Ajanı Oluştur', en: 'Create AI Helper Agent' },
+  'agent.createSubtitle': { tr: 'Otonom USDC dağıtımı için AI ajan oluştur', en: 'Create an AI agent for autonomous USDC distribution' },
+  'agent.name': { tr: 'Ajan Adı', en: 'Agent Name' },
+  'agent.namePlaceholder': { tr: 'ör. Eğitim Burs Ajanı', en: 'e.g. Education Scholarship Agent' },
+  'agent.description': { tr: 'Açıklama', en: 'Description' },
+  'agent.descPlaceholder': { tr: 'Bu ajan ne tür dileklere destek olacak?', en: 'What type of wishes will this agent support?' },
+  'agent.categories': { tr: 'Hedef Kategoriler', en: 'Target Categories' },
+  'agent.categoriesHint': { tr: 'Seçim yapılmazsa tüm kategorilere destek olur', en: 'If none selected, agent supports all categories' },
+  'agent.monthlyBudget': { tr: 'Aylık Bütçe (USDC)', en: 'Monthly Budget (USDC)' },
+  'agent.maxPerWish': { tr: 'Dilek Başına Maks (USDC)', en: 'Max Per Wish (USDC)' },
+  'agent.createButton': { tr: 'Ajan Oluştur', en: 'Create Agent' },
+  'agent.creating': { tr: 'Ajan oluşturuluyor...', en: 'Creating agent...' },
+  'agent.created': { tr: 'Ajan Oluşturuldu!', en: 'Agent Created!' },
+  'agent.createdInfo': { tr: 'Circle cüzdanı bağlanınca ajan aktif olacak', en: 'Agent will be active once Circle wallet is connected' },
+  'agent.viewAgent': { tr: 'Ajanı Görüntüle', en: 'View Agent' },
+  'agent.backToAgents': { tr: 'Ajanlara Dön', en: 'Back to Agents' },
+  'agent.nameRequired': { tr: 'Ad ve açıklama zorunlu', en: 'Name and description required' },
+  'agent.budgetRequired': { tr: 'Bütçe 0\'dan büyük olmalı', en: 'Budget must be greater than 0' },
+  'agent.newMatchmaker': { tr: 'Yardım Ajanı Oluştur', en: 'Create Helper Agent' },
+
+  // Language helper
+  '_lang': { tr: 'tr', en: 'en' },
 } as const;
 
 type TranslationKey = keyof typeof translations;
