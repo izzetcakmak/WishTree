@@ -18,3 +18,23 @@ out
 .deploy
 .logs
 *.tsbuildinfo
+
+# Secrets & environment
+.env
+.env.*
+!.env.example
+
+# Abacus internal
+.abacus.donotdelete
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Prisma generated
+nextjs_space/prisma/*.db
+nextjs_space/prisma/*.db-journal
