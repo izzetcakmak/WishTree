@@ -7,11 +7,14 @@ export const ARC_TESTNET = {
   rpcUrl: 'https://rpc.testnet.arc.network',
   blockExplorer: 'https://testnet.arcscan.app',
   currency: {
-    name: 'Arc',
-    symbol: 'ARC',
+    name: 'USDC',
+    symbol: 'USDC',
     decimals: 18,
   },
 };
+
+// Native USDC system contract on Arc (18 decimals for native, 6 for ERC-20 interface)
+export const USDC_NATIVE_ADDRESS = '0x3600000000000000000000000000000000000000';
 
 export const CONTRACT_ABI = [
   { inputs: [], stateMutability: 'nonpayable', type: 'constructor' },

@@ -35,17 +35,35 @@ export async function switchToArcTestnet(): Promise<boolean> {
     } catch (switchError: any) {
       // 4902 = chain not added yet, or unrecognized chain
       if (switchError?.code === 4902 || switchError?.code === -32603) {
-        await win.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: targetChainId,
-            chainName: ARC_TESTNET.name,
-            nativeCurrency: ARC_TESTNET.currency,
-            rpcUrls: [ARC_TESTNET.rpcUrl],
-            blockExplorerUrls: [ARC_TESTNET.blockExplorer || 'https://testnet.arcscan.app'],
-          }],
-        });
-        return true;
+        try {
+          await win.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: targetChainId,
+              chainName: ARC_TESTNET.name,
+              nativeCurrency: ARC_TESTNET.currency,
+              rpcUrls: [ARC_TESTNET.rpcUrl],
+              blockExplorerUrls: [ARC_TESTNET.blockExplorer || 'https://testnet.arcscan.app'],
+            }],
+          });
+          return true;
+        } catch (addError: any) {
+          // If adding fails because chain exists with different params,
+          // user needs to manually remove and re-add the network
+          console.error('Failed to add Arc Testnet:', addError);
+          if (addError?.code === -32602 || addError?.message?.includes('already exists') || addError?.message?.includes('nativeCurrency')) {
+            alert(
+              'Arc Testnet is registered in your wallet with outdated parameters.\n\n' +
+              'Please go to MetaMask → Settings → Networks, find "Arc Testnet", remove it, then try again.\n\n' +
+              'The network will be re-added with the correct USDC native currency settings.'
+            );
+          }
+          return false;
+        }
+      }
+      // User rejected the switch
+      if (switchError?.code === 4001) {
+        return false;
       }
       throw switchError;
     }

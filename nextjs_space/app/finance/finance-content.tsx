@@ -24,8 +24,8 @@ const SWAP_TOKENS = [
   { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' },
 ];
 
-// USDC contract on Arc Testnet (standard USDC address)
-const USDC_ADDRESS_ARC = '0x3029e11b2a3fb1Fe0e98956Da3F733bA1e1e2e0a';
+// USDC native address on Arc Testnet (18 decimals as native gas token)
+const USDC_ADDRESS_ARC = '0x3600000000000000000000000000000000000000';
 const USDC_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function decimals() view returns (uint8)',
@@ -354,116 +354,43 @@ export default function FinanceContent() {
     return { kit, adapter };
   }
 
-  // === SWAP via server-side proxy (avoids browser fetch issues) ===
+  // === SWAP via Circle AppKit SDK (client-side) ===
   async function handleSwap() {
     if (!walletAddress) { setSwapError(t('finance.connectFirst')); return; }
     if (!swapAmount || parseFloat(swapAmount) <= 0) return;
     if (swapFrom === swapTo) { setSwapError('Select different tokens'); return; }
     setSwapLoading(true); setSwapError(''); setSwapSuccess(false); setSwapSteps([]);
     try {
-      const tokenInDef = SWAP_TOKENS.find(tk => tk.value === swapFrom);
-      const tokenOutDef = SWAP_TOKENS.find(tk => tk.value === swapTo);
-      if (!tokenInDef || !tokenOutDef) throw new Error('Token not found');
-
-      // Convert human amount to base units (6 decimals)
-      const amountBase = Math.floor(parseFloat(swapAmount) * 1_000_000).toString();
-
       setSwapSteps([
-        { label: 'Getting swap quote from Circle...', status: 'active' },
-        { label: 'Waiting for wallet signature...', status: 'pending' },
-        { label: 'Confirming transaction...', status: 'pending' },
+        { label: 'Preparing swap via Circle SDK...', status: 'active' },
+        { label: 'Waiting for wallet confirmation...', status: 'pending' },
+        { label: 'Confirming on-chain...', status: 'pending' },
       ]);
 
-      // Step 1: Get swap transaction via server-side proxy
-      const proxyRes = await fetch('/api/finance/swap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'swap',
-          tokenInAddress: tokenInDef.address,
-          tokenInChain: 'Arc_Testnet',
-          tokenOutAddress: tokenOutDef.address,
-          tokenOutChain: 'Arc_Testnet',
-          fromAddress: walletAddress,
-          toAddress: walletAddress,
-          amount: amountBase,
-        }),
+      const { kit, adapter } = await getCircleKit();
+
+      setSwapSteps([
+        { label: 'Getting quote & executing swap...', status: 'active' },
+        { label: 'Waiting for wallet confirmation...', status: 'pending' },
+        { label: 'Confirming on-chain...', status: 'pending' },
+      ]);
+
+      const result = await kit.swap({
+        from: { adapter, chain: 'Arc_Testnet' as any },
+        tokenIn: swapFrom as any,
+        tokenOut: swapTo as any,
+        amountIn: swapAmount,
+        config: {
+          slippageBps: 300,
+          ...(kitKey ? { kitKey } : {}),
+        },
       });
 
-      const swapData = await proxyRes.json();
-      if (!proxyRes.ok) {
-        throw new Error(swapData?.error || swapData?.details?.message || 'Swap API error');
-      }
-
-      setSwapSteps([
-        { label: `Quote: ~${((parseInt(swapData.estimatedAmount || '0') / 1_000_000)).toFixed(4)} ${swapTo}`, status: 'done' },
-        { label: 'Waiting for wallet signature...', status: 'active' },
-        { label: 'Confirming transaction...', status: 'pending' },
-      ]);
-
-      // Step 2: Execute transaction via MetaMask
-      const win = window as any;
-      if (!win?.ethereum) throw new Error(t('finance.noWallet'));
-      const { ethers: eth } = await import('ethers');
-      const provider = new eth.providers.Web3Provider(win.ethereum, 'any');
-      const signer = provider.getSigner();
-      const execParams = swapData.transaction?.executionParams;
-
-      if (!execParams?.instructions?.length) {
-        throw new Error('No transaction instructions returned from swap API');
-      }
-
-      // ERC-20 approve ABI fragment
-      const erc20Iface = new eth.utils.Interface([
-        'function approve(address spender, uint256 amount) returns (bool)',
-      ]);
-
-      // Each instruction may need an ERC-20 approve first, then execution
-      const totalSteps = execParams.instructions.length;
-      let stepCounter = 0;
-
-      for (let i = 0; i < totalSteps; i++) {
-        const instr = execParams.instructions[i];
-
-        // If the instruction requires a token approval, do it first
-        if (instr.amountToApprove && instr.tokenIn && instr.tokenIn !== '0x0000000000000000000000000000000000000000') {
-          const approveAmount = eth.BigNumber.from(instr.amountToApprove);
-          if (approveAmount.gt(0)) {
-            stepCounter++;
-            setSwapSteps(prev => prev.map((s, idx) =>
-              idx === 1 ? { ...s, label: `Approving ${instr.tokenIn === tokenInDef.address ? swapFrom : swapTo} (step ${stepCounter})...`, status: 'active' } : s
-            ));
-
-            const approveData = erc20Iface.encodeFunctionData('approve', [instr.target, approveAmount]);
-            const approveTx = await signer.sendTransaction({
-              to: instr.tokenIn,
-              data: approveData,
-              value: '0x0',
-            });
-            await approveTx.wait();
-          }
-        }
-
-        // Execute the actual instruction
-        stepCounter++;
-        setSwapSteps(prev => prev.map((s, idx) =>
-          idx === 1 ? { ...s, label: `TX ${i + 1}/${totalSteps} sent...`, status: 'active' } : s
-        ));
-
-        const tx = await signer.sendTransaction({
-          to: instr.target,
-          data: instr.data,
-          value: instr.value || '0x0',
-          gasLimit: swapData.transaction?.gasLimit || undefined,
-        });
-
-        await tx.wait();
-      }
-
+      const txResult = result as any;
       setSwapSteps([
         { label: `Swapped ${swapAmount} ${swapFrom}`, status: 'done' },
-        { label: `Received ~${((parseInt(swapData.estimatedAmount || '0') / 1_000_000)).toFixed(4)} ${swapTo}`, status: 'done' },
-        { label: t('finance.success'), status: 'done' },
+        { label: `Received ${txResult?.amountOut ? `${txResult.amountOut} ${swapTo}` : `~${swapTo}`}`, status: 'done' },
+        { label: t('finance.success'), status: 'done', explorerUrl: txResult?.explorerUrl },
       ]);
       setSwapSuccess(true);
       setSwapAmount('');
@@ -473,6 +400,10 @@ export default function FinanceContent() {
       let msg = err?.message || t('finance.error');
       if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
         msg = t('finance.txRejected');
+      } else if (msg.includes('Insufficient') || msg.includes('insufficient')) {
+        msg = t('finance.noBalance');
+      } else if (msg.includes('route') || msg.includes('Route')) {
+        msg = 'Swap route not available. Try a different token pair or amount.';
       }
       setSwapError(msg);
       setSwapSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
@@ -514,9 +445,14 @@ export default function FinanceContent() {
       if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Bridge error:', err);
-      const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
-        ? t('finance.txRejected')
-        : (err?.message || t('finance.error'));
+      let msg = err?.message || t('finance.error');
+      if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+        msg = t('finance.txRejected');
+      } else if (msg.includes('Insufficient') || msg.includes('insufficient')) {
+        msg = t('finance.noBalance');
+      } else if (msg.includes('attestation')) {
+        msg = 'Bridge attestation failed. Please try again in a few minutes.';
+      }
       setBridgeError(msg);
       setBridgeSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
@@ -556,9 +492,12 @@ export default function FinanceContent() {
       if (walletAddress) fetchBalances(walletAddress);
     } catch (err: any) {
       console.error('Send error:', err);
-      const msg = err?.code === 4001 || err?.code === 'ACTION_REJECTED'
-        ? t('finance.txRejected')
-        : (err?.message || t('finance.error'));
+      let msg = err?.message || t('finance.error');
+      if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+        msg = t('finance.txRejected');
+      } else if (msg.includes('Insufficient') || msg.includes('insufficient')) {
+        msg = t('finance.noBalance');
+      }
       setSendError(msg);
       setSendSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
