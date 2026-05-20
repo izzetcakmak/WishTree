@@ -52,15 +52,15 @@ export default function WishCard({ content, index, walletAddress, sentiment, cat
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-mono text-gray-300">{shortAddr}</span>
             {category && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/30 text-purple-200 font-medium">
                 {category}
               </span>
             )}
             {sentiment && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                sentiment === 'positive' ? 'bg-green-500/20 text-green-300' :
-                sentiment === 'negative' ? 'bg-red-500/20 text-red-300' :
-                'bg-yellow-500/20 text-yellow-300'
+                sentiment === 'positive' ? 'bg-green-500/30 text-green-200' :
+                sentiment === 'negative' ? 'bg-red-500/30 text-red-200' :
+                'bg-yellow-500/30 text-yellow-200'
               }`}>
                 {sentiment}
               </span>

@@ -122,7 +122,7 @@ export default function BlessModal({ wishId, wishContent, onClose, onComplete }:
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         onClick={onClose}
       >
         <motion.div
@@ -130,10 +130,10 @@ export default function BlessModal({ wishId, wishContent, onClose, onComplete }:
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md glass rounded-2xl p-6 relative"
+          className="w-full max-w-md glass rounded-t-2xl sm:rounded-2xl p-6 relative max-h-[85vh] overflow-y-auto"
         >
           {/* Close */}
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="sticky top-0 float-right text-gray-400 hover:text-white transition-colors z-10">
             <X className="w-5 h-5" />
           </button>
 
