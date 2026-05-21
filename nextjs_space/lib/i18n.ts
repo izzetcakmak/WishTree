@@ -332,6 +332,7 @@ const translations = {
   'bless.retry': { tr: 'Tekrar Dene', en: 'Try Again' },
   'bless.invalidAmount': { tr: 'Geçerli bir miktar girin', en: 'Enter a valid amount' },
   'bless.contractNotDeployed': { tr: 'BlessingPool kontratı henüz deploy edilmedi', en: 'BlessingPool contract not deployed yet' },
+  'bless.contractError': { tr: 'Kontrat çağrısı başarısız. Dua off-chain kaydedildi.', en: 'Smart contract call failed. Blessing saved off-chain.' },
   'bless.noWallet': { tr: 'MetaMask bulunamadı', en: 'MetaMask not found' },
   'bless.noBlessings': { tr: 'Henüz blessing yok. İlk sen destek ol!', en: 'No blessings yet. Be the first to bless!' },
   'bless.totalBlessed': { tr: 'Toplam Destek', en: 'Total Blessed' },
