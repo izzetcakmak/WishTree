@@ -16,7 +16,7 @@ interface BlessModalProps {
   onComplete: () => void;
 }
 
-type Step = 'amount' | 'approving' | 'blessing' | 'success' | 'error';
+type Step = 'amount' | 'registering' | 'approving' | 'blessing' | 'success' | 'error';
 
 export default function BlessModal({ wishId, wishContent, onClose, onComplete }: BlessModalProps) {
   const [step, setStep] = useState<Step>('amount');
@@ -43,51 +43,58 @@ export default function BlessModal({ wishId, wishContent, onClose, onComplete }:
       const signer = provider.getSigner();
       const blesserAddress = await signer.getAddress();
 
-      // wishTokenId'yi DB'den al
+      // Wish bilgisini DB'den al
       const wishRes = await fetch(`/api/wishes`);
       const wishes = await wishRes.json();
       const wish = (Array.isArray(wishes) ? wishes : []).find((w: any) => w.id === wishId);
-      const wishTokenId = wish?.tokenId || 0;
+      let wishTokenId: number = wish?.tokenId || 0;
+      const wishOwnerAddress: string = wish?.walletAddress || '';
 
-      let onChainSuccess = false;
       let onChainTxHash = '';
 
-      // On-chain bless denemesi (BlessingPool + ERC-20 USDC)
-      if (BLESSING_POOL_ADDRESS && USDC_ADDRESS && wishTokenId > 0) {
-        try {
-          const usdcAmount = ethers.utils.parseUnits(amount, 6); // USDC ERC-20 = 6 decimals
+      if (BLESSING_POOL_ADDRESS && USDC_ADDRESS) {
+        const bp = new ethers.Contract(BLESSING_POOL_ADDRESS, BLESSING_POOL_ABI, signer);
+        const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+        const usdcAmount = ethers.utils.parseUnits(amount, 6);
 
-          // Step 1: USDC Approve
-          setStep('approving');
-          const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+        // Step 1: Wish henüz on-chain kayıtlı değilse registerWish yap
+        if (wishTokenId <= 0) {
+          setStep('registering');
+          // Yeni tokenId üret: DB'deki max tokenId + 1
+          const allTokenIds = (Array.isArray(wishes) ? wishes : [])
+            .map((w: any) => w.tokenId || 0)
+            .filter((id: number) => id > 0);
+          wishTokenId = allTokenIds.length > 0 ? Math.max(...allTokenIds) + 1 : 1;
 
-          // Check allowance — may fail if native USDC precompile doesn't support ERC-20
-          const currentAllowance = await usdc.allowance(blesserAddress, BLESSING_POOL_ADDRESS);
-          if (currentAllowance.lt(usdcAmount)) {
-            const approveTx = await usdc.approve(BLESSING_POOL_ADDRESS, usdcAmount);
-            await approveTx.wait();
-          }
+          const registerTx = await bp.registerWish(wishTokenId, wishOwnerAddress);
+          await registerTx.wait();
 
-          // Step 2: Bless on-chain
-          setStep('blessing');
-          const bp = new ethers.Contract(BLESSING_POOL_ADDRESS, BLESSING_POOL_ABI, signer);
-          const blessTx = await bp.bless(
-            wishTokenId,
-            usdcAmount,
-            message || '',
-            ethers.constants.HashZero
-          );
-          const receipt = await blessTx.wait();
-          onChainTxHash = receipt.transactionHash;
-          onChainSuccess = true;
-        } catch (chainErr: any) {
-          console.warn('On-chain bless failed, falling back to DB-only:', chainErr?.message);
-          // User rejected → rethrow
-          if (chainErr?.code === 4001 || chainErr?.code === 'ACTION_REJECTED') {
-            throw chainErr;
-          }
-          // Otherwise fall through to DB-only bless
+          // tokenId'yi DB'ye kaydet
+          await fetch('/api/wishes', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wishId, tokenId: wishTokenId }),
+          });
         }
+
+        // Step 2: USDC Approve
+        setStep('approving');
+        const currentAllowance = await usdc.allowance(blesserAddress, BLESSING_POOL_ADDRESS);
+        if (currentAllowance.lt(usdcAmount)) {
+          const approveTx = await usdc.approve(BLESSING_POOL_ADDRESS, usdcAmount);
+          await approveTx.wait();
+        }
+
+        // Step 3: Bless on-chain
+        setStep('blessing');
+        const blessTx = await bp.bless(
+          wishTokenId,
+          usdcAmount,
+          message || '',
+          ethers.constants.HashZero
+        );
+        const receipt = await blessTx.wait();
+        onChainTxHash = receipt.transactionHash;
       }
 
       // DB bless kaydı
@@ -113,7 +120,7 @@ export default function BlessModal({ wishId, wishContent, onClose, onComplete }:
       if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
         msg = t('finance.txRejected');
       } else if (msg.includes('CALL_EXCEPTION') || msg.includes('call revert')) {
-        msg = t('bless.contractError') || 'Smart contract call failed. Blessing saved off-chain.';
+        msg = t('bless.contractError') || 'Smart contract call failed.';
       }
       setError(msg);
       setStep('error');
@@ -213,6 +220,15 @@ export default function BlessModal({ wishId, wishContent, onClose, onComplete }:
               >
                 {t('bless.send')} {amount ? `${amount} USDC` : ''}
               </button>
+            </div>
+          )}
+
+          {/* Registering Wish On-chain */}
+          {step === 'registering' && (
+            <div className="flex flex-col items-center py-8 gap-3">
+              <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+              <p className="text-sm text-white/80">{t('bless.registering')}</p>
+              <p className="text-xs text-gray-400">{t('bless.confirmInWallet')}</p>
             </div>
           )}
 

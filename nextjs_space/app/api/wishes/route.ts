@@ -16,6 +16,24 @@ export async function GET() {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { wishId, tokenId } = body ?? {};
+    if (!wishId || typeof tokenId !== 'number') {
+      return NextResponse.json({ error: 'wishId and tokenId required' }, { status: 400 });
+    }
+    const wish = await prisma.wish.update({
+      where: { id: wishId },
+      data: { tokenId },
+    });
+    return NextResponse.json({ id: wish.id, tokenId: wish.tokenId });
+  } catch (error: any) {
+    console.error('Update wish tokenId error:', error);
+    return NextResponse.json({ error: error?.message ?? 'Internal error' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
