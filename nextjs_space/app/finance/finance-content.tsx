@@ -18,10 +18,12 @@ const BRIDGE_CHAINS = [
   { value: 'Optimism_Sepolia', label: 'Optimism Sepolia', icon: '🔴' },
 ];
 
-// Swap tokens on Arc Testnet — only USDC & EURC are supported by Circle SDK
+// Swap tokens on Arc Testnet
 const SWAP_TOKENS = [
-  { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000' },
-  { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' },
+  { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000', decimals: 6 },
+  { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 6 },
+  { value: 'cirBTC', label: 'cirBTC', icon: '₿', address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', decimals: 8 },
+  { value: 'QCAD', label: 'QCAD', icon: '🍁', address: '0x23d7cFfD0876f3Abb6b074287Ba2AEEF8C838250', decimals: 6 },
 ];
 
 // USDC native address on Arc Testnet (18 decimals as native gas token)
@@ -82,6 +84,9 @@ export default function FinanceContent() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [nativeBalance, setNativeBalance] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [eurcBalance, setEurcBalance] = useState<string | null>(null);
+  const [cirbtcBalance, setCirbtcBalance] = useState<string | null>(null);
+  const [qcadBalance, setQcadBalance] = useState<string | null>(null);
   const [kitKey, setKitKey] = useState<string>('');
   const [balanceLoading, setBalanceLoading] = useState(false);
 
@@ -104,6 +109,7 @@ export default function FinanceContent() {
   const [bridgeError, setBridgeError] = useState('');
 
   // Send state
+  const [sendToken, setSendToken] = useState('USDC');
   const [sendRecipient, setSendRecipient] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
@@ -131,16 +137,26 @@ export default function FinanceContent() {
       const native = await provider.getBalance(addr);
       setNativeBalance(parseFloat(ethers.utils.formatEther(native)).toFixed(4));
 
-      // Try to read USDC token balance
-      try {
-        const usdc = new ethers.Contract(USDC_ADDRESS_ARC, USDC_ABI, provider);
-        const decimals = await usdc.decimals();
-        const balance = await usdc.balanceOf(addr);
-        setUsdcBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toFixed(2));
-      } catch {
-        // USDC contract might not exist or different address on testnet
-        setUsdcBalance(null);
-      }
+      // Read all token balances
+      const tokenABI = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
+      const readTokenBalance = async (address: string, fallbackDecimals: number) => {
+        try {
+          const contract = new ethers.Contract(address, tokenABI, provider);
+          const [bal, dec] = await Promise.all([contract.balanceOf(addr), contract.decimals().catch(() => fallbackDecimals)]);
+          return parseFloat(ethers.utils.formatUnits(bal, dec));
+        } catch { return null; }
+      };
+
+      const [usdc, eurc, cirbtc, qcad] = await Promise.all([
+        readTokenBalance(USDC_ADDRESS_ARC, 6),
+        readTokenBalance('0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', 6),
+        readTokenBalance('0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', 8),
+        readTokenBalance('0x23d7cFfD0876f3Abb6b074287Ba2AEEF8C838250', 6),
+      ]);
+      setUsdcBalance(usdc !== null ? usdc.toFixed(2) : null);
+      setEurcBalance(eurc !== null ? eurc.toFixed(2) : null);
+      setCirbtcBalance(cirbtc !== null ? cirbtc.toFixed(8) : null);
+      setQcadBalance(qcad !== null ? qcad.toFixed(2) : null);
     } catch (err) {
       console.error('Balance fetch error:', err);
     } finally {
@@ -460,7 +476,7 @@ export default function FinanceContent() {
     }
   }
 
-  // === SEND (docs: kit.send) ===
+  // === SEND (supports USDC via Circle SDK, other tokens via ERC-20 transfer) ===
   async function handleSend() {
     if (!walletAddress) { setSendError(t('finance.connectFirst')); return; }
     if (!sendAmount || parseFloat(sendAmount) <= 0) return;
@@ -469,23 +485,44 @@ export default function FinanceContent() {
     }
     setSendLoading(true); setSendError(''); setSendSuccess(false); setSendSteps([]);
     try {
-      const { kit, adapter } = await getCircleKit();
-      setSendSteps([{ label: 'Sending USDC...', status: 'active' }]);
+      const tokenInfo = SWAP_TOKENS.find(t => t.value === sendToken);
 
-      const result = await kit.send({
-        from: { adapter, chain: 'Arc_Testnet' as any },
-        to: sendRecipient,
-        amount: sendAmount,
-        token: 'USDC',
-      });
+      if (sendToken === 'USDC') {
+        // Use Circle SDK for USDC
+        const { kit, adapter } = await getCircleKit();
+        setSendSteps([{ label: `Sending ${sendAmount} USDC...`, status: 'active' }]);
+        const result = await kit.send({
+          from: { adapter, chain: 'Arc_Testnet' as any },
+          to: sendRecipient,
+          amount: sendAmount,
+          token: 'USDC',
+        });
+        const steps: TxStep[] = (result as any)?.steps?.map((s: any, i: number) => ({
+          label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transfer'}`,
+          status: 'done' as const,
+          explorerUrl: s.explorerUrl || undefined,
+        })) || [{ label: t('finance.success'), status: 'done' as const }];
+        setSendSteps(steps);
+      } else {
+        // ERC-20 transfer for other tokens
+        if (!tokenInfo) throw new Error('Unknown token');
+        setSendSteps([{ label: `Sending ${sendAmount} ${sendToken}...`, status: 'active' }]);
+        const win = window as any;
+        const provider = new ethers.providers.Web3Provider(win.ethereum, 'any');
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(tokenInfo.address, [
+          'function transfer(address to, uint256 amount) returns (bool)',
+          'function decimals() view returns (uint8)',
+        ], signer);
+        const decimals = await contract.decimals().catch(() => tokenInfo.decimals);
+        const amountWei = ethers.utils.parseUnits(sendAmount, decimals);
+        const tx = await contract.transfer(sendRecipient, amountWei);
+        const receipt = await tx.wait();
+        setSendSteps([
+          { label: `Sent ${sendAmount} ${sendToken}`, status: 'done', explorerUrl: `https://testnet.arcscan.app/tx/${receipt.transactionHash}` },
+        ]);
+      }
 
-      const steps: TxStep[] = (result as any)?.steps?.map((s: any, i: number) => ({
-        label: `${t('finance.step')} ${i + 1}: ${s.action || 'Transfer'}`,
-        status: 'done' as const,
-        explorerUrl: s.explorerUrl || undefined,
-      })) || [{ label: t('finance.success'), status: 'done' as const }];
-
-      setSendSteps(steps);
       setSendSuccess(true);
       setSendAmount('');
       setSendRecipient('');
@@ -495,7 +532,7 @@ export default function FinanceContent() {
       let msg = err?.message || t('finance.error');
       if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
         msg = t('finance.txRejected');
-      } else if (msg.includes('Insufficient') || msg.includes('insufficient')) {
+      } else if (msg.includes('Insufficient') || msg.includes('insufficient') || msg.includes('exceeds balance')) {
         msg = t('finance.noBalance');
       }
       setSendError(msg);
@@ -584,14 +621,26 @@ export default function FinanceContent() {
                   <RefreshCw className={`w-3 h-3 ${balanceLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-xs text-gray-500 mb-1">Native (Gas)</div>
                   <div className="text-lg font-bold text-white">{nativeBalance ?? '...'}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-white/5">
-                  <div className="text-xs text-gray-500 mb-1">USDC Token</div>
+                  <div className="text-xs text-gray-500 mb-1">💲 USDC</div>
                   <div className="text-lg font-bold text-green-400">{usdcBalance ?? '...'}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="text-xs text-gray-500 mb-1">💶 EURC</div>
+                  <div className="text-lg font-bold text-blue-400">{eurcBalance ?? '0.00'}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="text-xs text-gray-500 mb-1">₿ cirBTC</div>
+                  <div className="text-lg font-bold text-orange-400">{cirbtcBalance ?? '0.00000000'}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <div className="text-xs text-gray-500 mb-1">🍁 QCAD</div>
+                  <div className="text-lg font-bold text-red-400">{qcadBalance ?? '0.00'}</div>
                 </div>
               </div>
             </div>
@@ -884,13 +933,20 @@ export default function FinanceContent() {
 
               <div className="space-y-4">
                 <div>
+                  <label className="block text-sm text-gray-400 mb-1">Token</label>
+                  <select value={sendToken} onChange={(e) => setSendToken(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
+                    {SWAP_TOKENS.map(tk => (<option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.recipient')}</label>
                   <input type="text" value={sendRecipient} onChange={(e) => setSendRecipient(e.target.value)} placeholder="0x..." className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white font-mono" />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('finance.sendAmount')}</label>
-                  <input type="number" step="0.01" min="0" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} placeholder="0.00 USDC" className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white" />
+                  <input type="number" step="0.000001" min="0" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} placeholder={`0.00 ${sendToken}`} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white" />
                 </div>
 
                 <button onClick={handleSend} disabled={sendLoading || !sendAmount || !sendRecipient} className="w-full py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
