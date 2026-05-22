@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, RefreshCw, Layers, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, RefreshCw, Layers, ArrowDownToLine, ArrowUpFromLine, Repeat2, Clock, DollarSign, ShieldCheck } from 'lucide-react';
 import Header from '../components/header';
 import { useT } from '@/lib/i18n';
 import { connectWallet, checkNetwork, switchToArcTestnet } from '@/lib/blockchain';
@@ -44,7 +44,22 @@ const UNIFIED_CHAINS = [
   { value: 'Optimism_Sepolia', label: 'Optimism Sepolia', icon: '🔴' },
 ];
 
-type TabType = 'unified' | 'swap' | 'bridge' | 'send';
+// StableFX currency pairs (CAD↔USD via QCAD/USDC, plus EUR↔USD)
+const STABLEFX_PAIRS = [
+  { from: 'USDC', to: 'QCAD', label: 'USD → CAD', fromIcon: '💲', toIcon: '🍁' },
+  { from: 'QCAD', to: 'USDC', label: 'CAD → USD', fromIcon: '🍁', toIcon: '💲' },
+  { from: 'USDC', to: 'EURC', label: 'USD → EUR', fromIcon: '💲', toIcon: '💶' },
+  { from: 'EURC', to: 'USDC', label: 'EUR → USD', fromIcon: '💶', toIcon: '💲' },
+];
+
+// Permit2 & FxEscrow contract addresses on Arc Testnet
+const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
+const FXESCROW_ADDRESS = '0x867650F5eAe8df91445971f14d89fd84F0C9a9f8';
+
+// ERC-20 approve ABI
+const ERC20_APPROVE_ABI = ['function approve(address spender, uint256 amount) returns (bool)', 'function allowance(address owner, address spender) view returns (uint256)'];
+
+type TabType = 'unified' | 'swap' | 'bridge' | 'send' | 'stablefx';
 
 interface BalanceBreakdownEntry {
   chain: string;
@@ -107,6 +122,17 @@ export default function FinanceContent() {
   const [bridgeSteps, setBridgeSteps] = useState<TxStep[]>([]);
   const [bridgeSuccess, setBridgeSuccess] = useState(false);
   const [bridgeError, setBridgeError] = useState('');
+
+  // StableFX state
+  const [sfxPairIdx, setSfxPairIdx] = useState(0);
+  const [sfxAmount, setSfxAmount] = useState('');
+  const [sfxLoading, setSfxLoading] = useState(false);
+  const [sfxSteps, setSfxSteps] = useState<TxStep[]>([]);
+  const [sfxSuccess, setSfxSuccess] = useState(false);
+  const [sfxError, setSfxError] = useState('');
+  const [sfxQuote, setSfxQuote] = useState<any>(null);
+  const [sfxTrade, setSfxTrade] = useState<any>(null);
+  const [sfxPhase, setSfxPhase] = useState<'idle' | 'quoted' | 'trading' | 'signing' | 'funding' | 'settled'>('idle');
 
   // Send state
   const [sendToken, setSendToken] = useState('USDC');
@@ -542,6 +568,224 @@ export default function FinanceContent() {
     }
   }
 
+  // === STABLEFX: Full RFQ flow (Permit2 approve → Quote → Trade → Sign → Fund → Settle) ===
+  async function handleStableFX() {
+    if (!walletAddress) { setSfxError(t('finance.connectFirst')); return; }
+    const amt = parseFloat(sfxAmount);
+    if (!sfxAmount || amt <= 0) return;
+    if (amt < 10) { setSfxError(t('finance.sfxMinAmount')); return; }
+
+    const pair = STABLEFX_PAIRS[sfxPairIdx];
+    setSfxLoading(true); setSfxError(''); setSfxSuccess(false); setSfxQuote(null); setSfxTrade(null);
+    setSfxPhase('idle');
+    setSfxSteps([
+      { label: t('finance.sfxStepPermit2'), status: 'active' },
+      { label: t('finance.sfxStepQuote'), status: 'pending' },
+      { label: t('finance.sfxStepTrade'), status: 'pending' },
+      { label: t('finance.sfxStepSign'), status: 'pending' },
+      { label: t('finance.sfxStepFund'), status: 'pending' },
+      { label: t('finance.sfxStepSettle'), status: 'pending' },
+    ]);
+
+    try {
+      const win = window as any;
+      const provider = new ethers.providers.Web3Provider(win.ethereum, 'any');
+      const signer = provider.getSigner();
+
+      // Step 1: Check and approve Permit2 for the sell token
+      const sellToken = SWAP_TOKENS.find(t => t.value === pair.from);
+      if (!sellToken) throw new Error('Unknown sell token');
+      const tokenContract = new ethers.Contract(sellToken.address, ERC20_APPROVE_ABI, signer);
+      const currentAllowance = await tokenContract.allowance(walletAddress, PERMIT2_ADDRESS);
+      const requiredAmount = ethers.utils.parseUnits(sfxAmount, sellToken.decimals);
+
+      if (currentAllowance.lt(requiredAmount)) {
+        const approveTx = await tokenContract.approve(PERMIT2_ADDRESS, ethers.constants.MaxUint256);
+        await approveTx.wait();
+      }
+
+      // Step 2: Request quote
+      setSfxSteps(prev => prev.map((s, i) => ({ ...s, status: i === 0 ? 'done' : i === 1 ? 'active' : s.status } as TxStep)));
+      const quoteRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'quote',
+          fromCurrency: pair.from,
+          fromAmount: sfxAmount,
+          toCurrency: pair.to,
+          tenor: 'instant',
+        }),
+      });
+      const quoteData = await quoteRes.json();
+      if (!quoteRes.ok || quoteData.error) {
+        throw new Error(quoteData.error || quoteData.details?.message || 'Quote request failed');
+      }
+      setSfxQuote(quoteData);
+      setSfxPhase('quoted');
+
+      // Step 3: Create trade
+      setSfxSteps(prev => prev.map((s, i) => ({ ...s, status: i <= 1 ? 'done' : i === 2 ? 'active' : s.status } as TxStep)));
+      const tradeRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'trade',
+          quoteId: quoteData.id,
+        }),
+      });
+      const tradeData = await tradeRes.json();
+      if (!tradeRes.ok || tradeData.error) {
+        throw new Error(tradeData.error || 'Trade creation failed');
+      }
+      setSfxTrade(tradeData);
+      setSfxPhase('trading');
+
+      // Step 4: Get presign data and sign trade intent (EIP-712)
+      setSfxSteps(prev => prev.map((s, i) => ({ ...s, status: i <= 2 ? 'done' : i === 3 ? 'active' : s.status } as TxStep)));
+      const presignRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'presign',
+          tradeId: tradeData.id,
+          recipientAddress: walletAddress,
+        }),
+      });
+      const presignData = await presignRes.json();
+      if (!presignRes.ok || presignData.error) {
+        throw new Error(presignData.error || 'Presign data fetch failed');
+      }
+
+      // Sign EIP-712 typed data with MetaMask
+      const typedData = presignData.typedData;
+      const tradeSignature = await win.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [walletAddress, JSON.stringify(typedData)],
+      });
+
+      // Submit trade signature
+      const sigPayload = {
+        ...typedData.message,
+        signature: tradeSignature,
+      };
+      const sigRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signature', signature: sigPayload }),
+      });
+      const sigData = await sigRes.json();
+      if (!sigRes.ok || sigData.error) {
+        throw new Error(sigData.error || 'Signature submission failed');
+      }
+      setSfxPhase('signing');
+
+      // Step 5: Get funding presign and sign Permit2 transfer
+      setSfxSteps(prev => prev.map((s, i) => ({ ...s, status: i <= 3 ? 'done' : i === 4 ? 'active' : s.status } as TxStep)));
+      const contractTradeId = tradeData.contractTradeId || tradeData.id;
+      const fundPresignRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'fundingPresign',
+          contractTradeIds: [contractTradeId],
+        }),
+      });
+      const fundPresignData = await fundPresignRes.json();
+      if (!fundPresignRes.ok || fundPresignData.error) {
+        throw new Error(fundPresignData.error || 'Funding presign failed');
+      }
+
+      // Sign Permit2 funding
+      const fundTypedData = fundPresignData.typedData;
+      const fundSignature = await win.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [walletAddress, JSON.stringify(fundTypedData)],
+      });
+
+      // Submit funding signature
+      const fundSigPayload = {
+        ...fundTypedData.message,
+        signature: fundSignature,
+      };
+      const fundSigRes = await fetch('/api/finance/stablefx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signature', signature: fundSigPayload }),
+      });
+      const fundSigData = await fundSigRes.json();
+      if (!fundSigRes.ok || fundSigData.error) {
+        throw new Error(fundSigData.error || 'Funding signature failed');
+      }
+      setSfxPhase('funding');
+
+      // Step 6: Settlement (automatic on-chain via FxEscrow)
+      setSfxSteps(prev => prev.map((s, i) => ({ ...s, status: i <= 4 ? 'done' : i === 5 ? 'active' : s.status } as TxStep)));
+
+      // Poll for settlement (max 60s)
+      let settled = false;
+      for (let i = 0; i < 12; i++) {
+        await new Promise(r => setTimeout(r, 5000));
+        const statusRes = await fetch('/api/finance/stablefx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'status', tradeId: tradeData.id }),
+        });
+        const statusData = await statusRes.json();
+        if (statusData.status === 'settled') {
+          settled = true;
+          const explorerUrl = statusData.settlementTransactionHash
+            ? `https://testnet.arcscan.io/tx/${statusData.settlementTransactionHash}`
+            : undefined;
+          setSfxSteps([
+            { label: `Permit2 ${t('finance.sfxApproved')}`, status: 'done' },
+            { label: `${t('finance.sfxQuoteRate')}: 1 ${pair.from} = ${quoteData.rate} ${pair.to}`, status: 'done' },
+            { label: `${t('finance.sfxTradeLocked')}`, status: 'done' },
+            { label: `${t('finance.sfxSigned')}`, status: 'done' },
+            { label: `${t('finance.sfxFunded')}`, status: 'done' },
+            { label: `${t('finance.sfxSettled')}: ${quoteData.to?.amount || '~'} ${pair.to}`, status: 'done', explorerUrl },
+          ]);
+          break;
+        }
+        if (statusData.status === 'breached' || statusData.status === 'expired') {
+          throw new Error(`Trade ${statusData.status}`);
+        }
+      }
+
+      if (!settled) {
+        // Still settling, show pending
+        setSfxSteps(prev => prev.map((s, i) => ({
+          ...s,
+          status: i <= 4 ? 'done' : 'active',
+          label: i === 5 ? t('finance.sfxSettling') : s.label,
+        } as TxStep)));
+      }
+
+      setSfxPhase('settled');
+      setSfxSuccess(true);
+      setSfxAmount('');
+      if (walletAddress) fetchBalances(walletAddress);
+    } catch (err: any) {
+      console.error('StableFX error:', err);
+      let msg = err?.message || t('finance.error');
+      if (err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+        msg = t('finance.txRejected');
+      } else if (msg.includes('minimum') || msg.includes('Minimum') || msg.includes('< 10')) {
+        msg = t('finance.sfxMinAmount');
+      }
+      setSfxError(msg);
+      setSfxSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
+    } finally {
+      setSfxLoading(false);
+    }
+  }
+
+  // Reset StableFX state for new trade
+  function resetStableFX() {
+    setSfxPhase('idle'); setSfxQuote(null); setSfxTrade(null);
+    setSfxError(''); setSfxSuccess(false); setSfxSteps([]);
+  }
+
   function renderSteps(steps: TxStep[]) {
     if (steps.length === 0) return null;
     return (
@@ -568,6 +812,7 @@ export default function FinanceContent() {
 
   const tabs: { key: TabType; icon: any; color: string }[] = [
     { key: 'unified', icon: Layers, color: 'text-pink-400' },
+    { key: 'stablefx', icon: Repeat2, color: 'text-amber-400' },
     { key: 'swap', icon: ArrowDownUp, color: 'text-purple-400' },
     { key: 'bridge', icon: ArrowLeftRight, color: 'text-blue-400' },
     { key: 'send', icon: Send, color: 'text-green-400' },
@@ -575,6 +820,7 @@ export default function FinanceContent() {
 
   const tabLabels: Record<TabType, string> = {
     unified: t('finance.unified'),
+    stablefx: 'StableFX',
     swap: t('finance.swap'),
     bridge: t('finance.bridge'),
     send: t('finance.send'),
@@ -797,6 +1043,136 @@ export default function FinanceContent() {
                   </div>
                 </div>
                 {renderSteps(spendSteps)}
+              </div>
+            </motion.div>
+          )}
+
+          {/* StableFX Tab */}
+          {activeTab === 'stablefx' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+              {/* Header */}
+              <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <Repeat2 className="w-5 h-5 text-amber-400" />
+                  <h2 className="font-semibold text-lg">StableFX</h2>
+                  <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">RFQ</span>
+                </div>
+                <p className="text-xs text-gray-500 mb-5">{t('finance.sfxDesc')}</p>
+
+                {sfxSuccess && (
+                  <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm mb-4">
+                    <CheckCircle2 className="w-4 h-4" /> {t('finance.success')}
+                    <button onClick={resetStableFX} className="ml-auto text-xs underline">{t('finance.sfxNewTrade')}</button>
+                  </div>
+                )}
+                {sfxError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4 break-words">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>{sfxError}</span>
+                      <button onClick={resetStableFX} className="ml-auto text-xs underline flex-shrink-0">{t('finance.sfxRetry')}</button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Currency Pair Selector */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">{t('finance.sfxPair')}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {STABLEFX_PAIRS.map((pair, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => { setSfxPairIdx(idx); resetStableFX(); }}
+                          className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            sfxPairIdx === idx
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>{pair.fromIcon}</span>
+                          <span>{pair.label}</span>
+                          <span>{pair.toIcon}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      {t('finance.amount')} ({STABLEFX_PAIRS[sfxPairIdx].from})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="10"
+                      value={sfxAmount}
+                      onChange={(e) => setSfxAmount(e.target.value)}
+                      placeholder={`${t('finance.sfxMinLabel')} 10.00`}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-white"
+                      disabled={sfxLoading}
+                    />
+                  </div>
+
+                  {/* Quote Preview (if available) */}
+                  {sfxQuote && (
+                    <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                      <div className="flex items-center gap-2 text-amber-400 text-sm font-medium mb-2">
+                        <DollarSign className="w-4 h-4" />
+                        {t('finance.sfxQuoteDetails')}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="text-gray-400">{t('finance.sfxRate')}</div>
+                        <div className="text-white font-mono">1 {STABLEFX_PAIRS[sfxPairIdx].from} = {sfxQuote.rate} {STABLEFX_PAIRS[sfxPairIdx].to}</div>
+                        <div className="text-gray-400">{t('finance.sfxYouSell')}</div>
+                        <div className="text-white font-mono">{sfxQuote.from?.amount} {sfxQuote.from?.currency}</div>
+                        <div className="text-gray-400">{t('finance.sfxYouGet')}</div>
+                        <div className="text-green-400 font-mono">{sfxQuote.to?.amount} {sfxQuote.to?.currency}</div>
+                        {sfxQuote.fee && (
+                          <><div className="text-gray-400">{t('finance.sfxFee')}</div>
+                          <div className="text-gray-300 font-mono">{sfxQuote.fee.amount} {sfxQuote.fee.currency}</div></>
+                        )}
+                        {sfxQuote.expiry && (
+                          <><div className="text-gray-400">{t('finance.sfxExpiry')}</div>
+                          <div className="text-gray-300 font-mono flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(sfxQuote.expiry).toLocaleTimeString()}</div></>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Execute Button */}
+                  <button
+                    onClick={handleStableFX}
+                    disabled={sfxLoading || !sfxAmount || parseFloat(sfxAmount) < 10}
+                    className="w-full py-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {sfxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Repeat2 className="w-4 h-4" />}
+                    {sfxLoading ? t('finance.sfxExecuting') : t('finance.sfxExecute')}
+                  </button>
+                </div>
+
+                {renderSteps(sfxSteps)}
+              </div>
+
+              {/* Info Card */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-medium text-amber-400">{t('finance.sfxHowItWorks')}</span>
+                </div>
+                <div className="text-xs text-gray-400 space-y-1.5">
+                  <p>{t('finance.sfxInfo1')}</p>
+                  <p>{t('finance.sfxInfo2')}</p>
+                  <p>{t('finance.sfxInfo3')}</p>
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs">
+                  <span className="text-gray-500">FxEscrow:</span>
+                  <a href={`https://testnet.arcscan.io/address/${FXESCROW_ADDRESS}`} target="_blank" rel="noopener noreferrer" className="text-amber-400/70 hover:text-amber-400 font-mono truncate flex items-center gap-1">
+                    {FXESCROW_ADDRESS.slice(0, 10)}...{FXESCROW_ADDRESS.slice(-6)}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
             </motion.div>
           )}
