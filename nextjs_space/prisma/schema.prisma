@@ -163,8 +163,9 @@ model AgentValidation {
 model PhoneWallet {
   id            String   @id @default(cuid())
   phone         String   @unique
-  circleWalletId String  @unique
+  circleWalletId String?  @unique
   walletAddress String   @unique
+  encryptedKey  String?
   wishes        Wish[]
   createdAt     DateTime @default(now())
 }
