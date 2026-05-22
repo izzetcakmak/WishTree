@@ -404,12 +404,52 @@ export default function FinanceContent() {
     return { kit, adapter };
   }
 
-  // === SWAP via Circle AppKit SDK (client-side) ===
+  // Helper: Patch window.fetch to proxy Circle API calls through our server (avoids CORS)
+  function patchFetchForCircleProxy() {
+    const originalFetch = window.fetch;
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+      if (url.includes('api.circle.com') || url.includes('iris-api.circle.com')) {
+        // Extract headers as plain object
+        const hdrs: Record<string, string> = {};
+        if (init?.headers) {
+          if (init.headers instanceof Headers) {
+            init.headers.forEach((v, k) => { hdrs[k] = v; });
+          } else if (Array.isArray(init.headers)) {
+            init.headers.forEach(([k, v]) => { hdrs[k] = v; });
+          } else {
+            Object.assign(hdrs, init.headers);
+          }
+        }
+        let bodyData = init?.body;
+        if (typeof bodyData === 'string') {
+          try { bodyData = JSON.parse(bodyData); } catch { /* keep as string */ }
+        }
+        console.log('[CircleProxy] Routing through server:', init?.method || 'GET', url);
+        return originalFetch('/api/finance/swap-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUrl: url,
+            method: init?.method || 'GET',
+            body: bodyData,
+            headers: hdrs,
+          }),
+        });
+      }
+      return originalFetch(input, init);
+    };
+    return originalFetch;
+  }
+
+  // === SWAP via Circle AppKit SDK (client-side, with server proxy for CORS) ===
   async function handleSwap() {
     if (!walletAddress) { setSwapError(t('finance.connectFirst')); return; }
     if (!swapAmount || parseFloat(swapAmount) <= 0) return;
     if (swapFrom === swapTo) { setSwapError('Select different tokens'); return; }
     setSwapLoading(true); setSwapError(''); setSwapSuccess(false); setSwapSteps([]);
+    // Patch fetch to route Circle API calls through our proxy
+    const originalFetch = patchFetchForCircleProxy();
     try {
       setSwapSteps([
         { label: 'Preparing swap via Circle SDK...', status: 'active' },
@@ -458,6 +498,8 @@ export default function FinanceContent() {
       setSwapError(msg);
       setSwapSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
+      // Always restore original fetch
+      window.fetch = originalFetch;
       setSwapLoading(false);
     }
   }
@@ -468,6 +510,7 @@ export default function FinanceContent() {
     if (!bridgeAmount || parseFloat(bridgeAmount) <= 0) return;
     if (bridgeFrom === bridgeTo) { setBridgeError('Source and destination must be different'); return; }
     setBridgeLoading(true); setBridgeError(''); setBridgeSuccess(false); setBridgeSteps([]);
+    const originalFetch = patchFetchForCircleProxy();
     try {
       const { kit, adapter } = await getCircleKit();
       setBridgeSteps([
@@ -506,6 +549,7 @@ export default function FinanceContent() {
       setBridgeError(msg);
       setBridgeSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
+      window.fetch = originalFetch;
       setBridgeLoading(false);
     }
   }
@@ -518,6 +562,7 @@ export default function FinanceContent() {
       setSendError('Invalid recipient address'); return;
     }
     setSendLoading(true); setSendError(''); setSendSuccess(false); setSendSteps([]);
+    const originalFetch = patchFetchForCircleProxy();
     try {
       const tokenInfo = ALL_TOKENS.find(t => t.value === sendToken);
 
@@ -572,6 +617,7 @@ export default function FinanceContent() {
       setSendError(msg);
       setSendSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'error' } : s));
     } finally {
+      window.fetch = originalFetch;
       setSendLoading(false);
     }
   }
