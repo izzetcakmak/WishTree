@@ -19,7 +19,15 @@ const BRIDGE_CHAINS = [
 ];
 
 // Swap tokens on Arc Testnet
+// Circle SDK kit.swap() only supports USDC↔EURC on Arc Testnet
+// For QCAD swaps use StableFX tab, cirBTC not yet supported for swap
 const SWAP_TOKENS = [
+  { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000', decimals: 6 },
+  { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 6 },
+];
+
+// Full token list (for balance display, bridge, send etc.)
+const ALL_TOKENS = [
   { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000', decimals: 6 },
   { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 6 },
   { value: 'cirBTC', label: 'cirBTC', icon: '₿', address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', decimals: 8 },
@@ -511,7 +519,7 @@ export default function FinanceContent() {
     }
     setSendLoading(true); setSendError(''); setSendSuccess(false); setSendSteps([]);
     try {
-      const tokenInfo = SWAP_TOKENS.find(t => t.value === sendToken);
+      const tokenInfo = ALL_TOKENS.find(t => t.value === sendToken);
 
       if (sendToken === 'USDC') {
         // Use Circle SDK for USDC
@@ -593,7 +601,7 @@ export default function FinanceContent() {
       const signer = provider.getSigner();
 
       // Step 1: Check and approve Permit2 for the sell token
-      const sellToken = SWAP_TOKENS.find(t => t.value === pair.from);
+      const sellToken = ALL_TOKENS.find(t => t.value === pair.from);
       if (!sellToken) throw new Error('Unknown sell token');
       const tokenContract = new ethers.Contract(sellToken.address, ERC20_APPROVE_ABI, signer);
       const currentAllowance = await tokenContract.allowance(walletAddress, PERMIT2_ADDRESS);
@@ -1184,7 +1192,11 @@ export default function FinanceContent() {
                 <ArrowDownUp className="w-5 h-5 text-purple-400" />
                 <h2 className="font-semibold text-lg">{t('finance.swap')}</h2>
               </div>
-              <p className="text-xs text-gray-500 mb-5">{t('finance.swapDesc')}</p>
+              <p className="text-xs text-gray-500 mb-3">{t('finance.swapDesc')}</p>
+              <div className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-5 flex items-center gap-1.5">
+                <Repeat2 className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{t('finance.swapQcadHint')}</span>
+              </div>
 
               {swapSuccess && (
                 <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm mb-4">
@@ -1311,7 +1323,7 @@ export default function FinanceContent() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Token</label>
                   <select value={sendToken} onChange={(e) => setSendToken(e.target.value)} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none text-gray-300">
-                    {SWAP_TOKENS.map(tk => (<option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>))}
+                    {ALL_TOKENS.map(tk => (<option key={tk.value} value={tk.value}>{tk.icon} {tk.label}</option>))}
                   </select>
                 </div>
 

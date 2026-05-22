@@ -259,6 +259,7 @@ const translations = {
   // Swap
   'finance.swap': { tr: 'Takas', en: 'Swap' },
   'finance.swapDesc': { tr: 'Arc Testnet üzerinde token takası yapın', en: 'Swap tokens on Arc Testnet' },
+  'finance.swapQcadHint': { tr: 'QCAD/USDC swapları için StableFX sekmesini kullanın', en: 'For QCAD/USDC swaps use the StableFX tab' },
   'finance.fromToken': { tr: 'Token\'dan', en: 'From Token' },
   'finance.toToken': { tr: 'Token\'a', en: 'To Token' },
   'finance.amount': { tr: 'Miktar', en: 'Amount' },
