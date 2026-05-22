@@ -18,12 +18,12 @@ model User {
   password      String?
   walletAddress String?   @unique
   role          String    @default("user")
-  accounts      Account[]
-  sessions      Session[]
-  wishes        Wish[]
-  agents        Agent[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  agents        Agent[]
+  sessions      Session[]
+  wishes        Wish[]
 }
 
 model Account {
@@ -67,28 +67,27 @@ model Wish {
   tokenId       Int?
   walletAddress String
   userId        String?
-  user          User?         @relation(fields: [userId], references: [id])
-  analysis      WishAnalysis?
-  // Blessing flow additions
-  category      String?
-  phoneWalletId String?
-  phoneWallet   PhoneWallet?  @relation(fields: [phoneWalletId], references: [id])
-  blessings     Blessing[]
-  totalBlessed  Float         @default(0)
-  claimed       Boolean       @default(false)
-  claimedAt     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  category      String?
+  claimed       Boolean       @default(false)
+  claimedAt     DateTime?
+  phoneWalletId String?
+  totalBlessed  Float         @default(0)
+  blessings     Blessing[]
+  phoneWallet   PhoneWallet?  @relation(fields: [phoneWalletId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+  analysis      WishAnalysis?
 }
 
 model WishAnalysis {
   id        String   @id @default(cuid())
   wishId    String   @unique
-  wish      Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
   sentiment String
   category  String
   score     Float
   createdAt DateTime @default(now())
+  wish      Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
 }
 
 model ContactSubmission {
@@ -102,104 +101,101 @@ model ContactSubmission {
 }
 
 model Agent {
-  id              String            @id @default(cuid())
-  agentTokenId    Int?              @unique
-  name            String
-  description     String
-  agentType       String
-  capabilities    String[]
-  version         String            @default("1.0.0")
-  metadataURI     String?
-  ownerAddress    String
-  txHash          String?           @unique
-  status          String            @default("pending")
-  userId          String?
-  user            User?             @relation(fields: [userId], references: [id])
-  feedbacks       AgentFeedback[]
-  validations     AgentValidation[]
-  // AI Matchmaker Agent additions
-  onchainAgentId  Int?              @unique
-  walletId        String?
-  walletAddress   String?
-  criteria        Json?
-  monthlyBudget   Float             @default(0)
-  monthlySpent    Float             @default(0)
-  monthResetAt    DateTime?
-  lastTickAt      DateTime?
-  blessings       Blessing[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  agentTokenId   Int?              @unique
+  name           String
+  description    String
+  agentType      String
+  capabilities   String[]
+  version        String            @default("1.0.0")
+  metadataURI    String?
+  ownerAddress   String
+  txHash         String?           @unique
+  status         String            @default("pending")
+  userId         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  criteria       Json?
+  lastTickAt     DateTime?
+  monthResetAt   DateTime?
+  monthlyBudget  Float             @default(0)
+  monthlySpent   Float             @default(0)
+  onchainAgentId Int?              @unique
+  walletAddress  String?
+  walletId       String?
+  user           User?             @relation(fields: [userId], references: [id])
+  feedbacks      AgentFeedback[]
+  validations    AgentValidation[]
+  blessings      Blessing[]
 }
 
 model AgentFeedback {
-  id          String   @id @default(cuid())
-  agentId     String
-  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  score       Int
-  tag         String
-  comment     String?
-  validator   String
-  txHash      String?  @unique
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  agentId   String
+  score     Int
+  tag       String
+  comment   String?
+  validator String
+  txHash    String?  @unique
+  createdAt DateTime @default(now())
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 model AgentValidation {
-  id            String   @id @default(cuid())
-  agentId       String
-  agent         Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  requestHash   String   @unique
-  requestURI    String?
-  validator     String
-  response      Int?
-  responseTag   String?
-  status        String   @default("pending")
-  txHash        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  agentId     String
+  requestHash String   @unique
+  requestURI  String?
+  validator   String
+  response    Int?
+  responseTag String?
+  status      String   @default("pending")
+  txHash      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
-// ===== NEW MODELS FOR WHATSAPP + BLESS + AI AGENT FLOWS =====
-
 model PhoneWallet {
-  id            String   @id @default(cuid())
-  phone         String   @unique
+  id             String   @id @default(cuid())
+  phone          String   @unique
   circleWalletId String?  @unique
-  walletAddress String   @unique
-  encryptedKey  String?
-  wishes        Wish[]
-  createdAt     DateTime @default(now())
+  walletAddress  String   @unique
+  createdAt      DateTime @default(now())
+  encryptedKey   String?
+  wishes         Wish[]
 }
 
 model Blessing {
-  id            String   @id @default(cuid())
-  wishId        String
-  wish          Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
-  blesserAddress String
-  amount        Float
-  message       String?
-  txHash        String?  @unique
-  chainSource   String   @default("arc")
+  id               String   @id @default(cuid())
+  wishId           String
+  blesserAddress   String
+  amount           Float
+  message          String?
+  txHash           String?  @unique
+  chainSource      String   @default("arc")
   gatewayDepositId String?
-  agentId       String?
-  agent         Agent?   @relation(fields: [agentId], references: [id])
-  createdAt     DateTime @default(now())
+  agentId          String?
+  createdAt        DateTime @default(now())
+  agent            Agent?   @relation(fields: [agentId], references: [id])
+  wish             Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
 }
 
 model ProcessedMessage {
-  id            String   @id @default(cuid())
-  twilioSid     String   @unique
-  processedAt   DateTime @default(now())
+  id          String   @id @default(cuid())
+  twilioSid   String   @unique
+  processedAt DateTime @default(now())
 }
 
 model GatewayDeposit {
-  id              String   @id @default(cuid())
-  depositAddress  String
-  wishId          String
-  blesserAddress  String
-  amount          Float
-  sourceChain     String
-  status          String   @default("pending")
-  blessingId      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  depositAddress String
+  wishId         String
+  blesserAddress String
+  amount         Float
+  sourceChain    String
+  status         String   @default("pending")
+  blessingId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
