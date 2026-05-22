@@ -19,11 +19,12 @@ const BRIDGE_CHAINS = [
 ];
 
 // Swap tokens on Arc Testnet
-// Circle SDK kit.swap() only supports USDC↔EURC on Arc Testnet
-// For QCAD swaps use StableFX tab, cirBTC not yet supported for swap
+// Circle SDK kit.swap() supports USDC, EURC, cirBTC on Arc Testnet
+// For QCAD swaps use StableFX tab (institutional RFQ)
 const SWAP_TOKENS = [
   { value: 'USDC', label: 'USDC', icon: '💲', address: '0x3600000000000000000000000000000000000000', decimals: 6 },
   { value: 'EURC', label: 'EURC', icon: '💶', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 6 },
+  { value: 'cirBTC', label: 'cirBTC', icon: '₿', address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', decimals: 8 },
 ];
 
 // Full token list (for balance display, bridge, send etc.)
