@@ -25,40 +25,98 @@ export async function registerAgent(metadataURI: string): Promise<ethers.Contrac
 }
 
 /**
+ * Raw fetch-based RPC helper (avoids ethers JsonRpcProvider network detection issues in prod).
+ */
+async function rpcFetch(method: string, params: any[]): Promise<any> {
+  const res = await fetch(ARC_TESTNET.rpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params }),
+  });
+  if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.error) throw new Error(`RPC error: ${json.error.message || JSON.stringify(json.error)}`);
+  return json.result;
+}
+
+/**
  * Server-side agent registration using relayer private key.
- * Calls IdentityRegistry.register(metadataURI) and returns { txHash, agentTokenId }.
+ * Uses raw fetch calls to avoid ethers provider NETWORK_ERROR in production.
  */
 export async function registerAgentOnChain(metadataURI: string): Promise<{ txHash: string; agentTokenId: number }> {
   const relayerKey = process.env.RELAYER_PRIVATE_KEY;
   if (!relayerKey) throw new Error('RELAYER_PRIVATE_KEY not configured');
 
-  const provider = new ethers.providers.JsonRpcProvider(ARC_TESTNET.rpcUrl);
-  const wallet = new ethers.Wallet(relayerKey, provider);
-  const contract = new ethers.Contract(
-    ERC8004_CONTRACTS.IDENTITY_REGISTRY,
-    IDENTITY_REGISTRY_ABI,
-    wallet
-  );
+  const wallet = new ethers.Wallet(relayerKey);
+  const iface = new ethers.utils.Interface(IDENTITY_REGISTRY_ABI as any);
+  const calldata = iface.encodeFunctionData('register', [metadataURI]);
 
   console.log(`[ERC-8004] Registering agent on-chain via relayer ${wallet.address}...`);
-  const tx = await contract.register(metadataURI);
-  const receipt = await tx.wait();
-  console.log(`[ERC-8004] TX confirmed: ${receipt.transactionHash}`);
+
+  // Get nonce and gas price via raw fetch
+  const [nonceHex, gasPriceHex, chainIdHex] = await Promise.all([
+    rpcFetch('eth_getTransactionCount', [wallet.address, 'latest']),
+    rpcFetch('eth_gasPrice', []),
+    rpcFetch('eth_chainId', []),
+  ]);
+
+  const nonce = parseInt(nonceHex, 16);
+  const chainId = parseInt(chainIdHex, 16);
+
+  // Estimate gas
+  let gasLimit = 300000;
+  try {
+    const estHex = await rpcFetch('eth_estimateGas', [{
+      from: wallet.address,
+      to: ERC8004_CONTRACTS.IDENTITY_REGISTRY,
+      data: calldata,
+    }]);
+    gasLimit = Math.ceil(parseInt(estHex, 16) * 1.3); // 30% buffer
+  } catch {
+    console.log('[ERC-8004] Gas estimation failed, using default 300000');
+  }
+
+  // Build and sign transaction
+  const tx = {
+    to: ERC8004_CONTRACTS.IDENTITY_REGISTRY,
+    data: calldata,
+    nonce,
+    gasLimit: ethers.utils.hexlify(gasLimit),
+    gasPrice: gasPriceHex,
+    chainId,
+  };
+
+  const signedTx = await wallet.signTransaction(tx);
+
+  // Send raw transaction
+  const txHash = await rpcFetch('eth_sendRawTransaction', [signedTx]);
+  console.log(`[ERC-8004] TX sent: ${txHash}`);
+
+  // Poll for receipt (max ~60s)
+  let receipt: any = null;
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    receipt = await rpcFetch('eth_getTransactionReceipt', [txHash]);
+    if (receipt) break;
+  }
+
+  if (!receipt) throw new Error(`TX ${txHash} not confirmed after 60s`);
+  if (receipt.status === '0x0') throw new Error(`TX ${txHash} reverted`);
+
+  console.log(`[ERC-8004] TX confirmed: ${txHash}`);
 
   // Parse Transfer event to get tokenId
-  const iface = new ethers.utils.Interface(IDENTITY_REGISTRY_ABI as any);
   let agentTokenId: number | null = null;
-  for (const log of receipt.logs) {
-    try {
-      if (log.address?.toLowerCase() !== ERC8004_CONTRACTS.IDENTITY_REGISTRY.toLowerCase()) continue;
-      const parsed = iface.parseLog(log);
-      if (parsed.name === 'Transfer') {
-        const tokenId = parsed.args.tokenId;
-        agentTokenId = typeof tokenId?.toNumber === 'function' ? tokenId.toNumber() : Number(tokenId);
+  const transferTopic = ethers.utils.id('Transfer(address,address,uint256)');
+  for (const log of (receipt.logs || [])) {
+    if (log.address?.toLowerCase() !== ERC8004_CONTRACTS.IDENTITY_REGISTRY.toLowerCase()) continue;
+    if (log.topics?.[0] === transferTopic) {
+      // tokenId is the 3rd topic (topics[3]) for ERC721 Transfer
+      const tokenIdHex = log.topics[3];
+      if (tokenIdHex) {
+        agentTokenId = parseInt(tokenIdHex, 16);
         break;
       }
-    } catch {
-      continue;
     }
   }
 
@@ -67,7 +125,7 @@ export async function registerAgentOnChain(metadataURI: string): Promise<{ txHas
   }
 
   console.log(`[ERC-8004] Agent registered with tokenId: ${agentTokenId}`);
-  return { txHash: receipt.transactionHash, agentTokenId };
+  return { txHash, agentTokenId };
 }
 
 export async function getAgentOwner(agentId: number): Promise<string | null> {
