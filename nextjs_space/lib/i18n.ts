@@ -403,7 +403,7 @@ const translations = {
   'agent.newMatchmaker': { tr: 'Yardım Ajanı Oluştur', en: 'Create Helper Agent' },
 
   // Billboard
-  'billboard.text': { tr: 'Arcwish is a WhatsApp-first social payments layer on Arc, turning wishes into programmable USDC flows, AI-assisted giving, and walletless onboarding.', en: 'Arcwish is a WhatsApp-first social payments layer on Arc, turning wishes into programmable USDC flows, AI-assisted giving, and walletless onboarding.' },
+  'billboard.text': { tr: 'Arcwish, Arc üzerinde WhatsApp-first bir dilek platformudur — dilekleri NFT olarak mint eder, yapay zeka destekli eşleştirme sunar ve cüzdansız onboarding sağlar.', en: 'Arcwish is a WhatsApp-first wishing platform on Arc — minting wishes as NFTs, offering AI-powered matchmaking, and walletless onboarding.' },
   'billboard.cta': { tr: 'Nasıl Çalışır?', en: 'How It Works' },
 
   // Demo badge

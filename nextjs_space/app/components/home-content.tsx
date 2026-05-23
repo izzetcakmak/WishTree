@@ -89,7 +89,7 @@ export default function HomeContent() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.15),transparent_60%)]" />
             <div className="relative z-10 max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 text-accent text-xs font-bold mb-4">
-                <Zap className="w-3 h-3" /> ERC-8004 Powered
+                <Zap className="w-3 h-3" /> Arc Testnet
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-medium text-white/90 leading-relaxed">
                 {t('billboard.text')}

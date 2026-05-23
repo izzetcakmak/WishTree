@@ -216,8 +216,8 @@ export default function FinanceContent() {
 
   // === UNIFIED BALANCE: Helper to build context + adapter ===
   async function getUnifiedKit() {
-    const ub = await import('@circle-fin/unified-balance-kit');
-    const { createViemAdapterFromProvider } = await import('@circle-fin/adapter-viem-v2');
+    const ub = await import(/* webpackIgnore: true */ '@circle-fin/unified-balance-kit');
+    const { createViemAdapterFromProvider } = await import(/* webpackIgnore: true */ '@circle-fin/adapter-viem-v2');
     const ethereum = (window as any).ethereum;
     if (!ethereum) throw new Error(t('finance.noWallet'));
     const adapter = await createViemAdapterFromProvider({ provider: ethereum });
@@ -393,8 +393,8 @@ export default function FinanceContent() {
 
   // Dynamic import for Circle SDK (client-side)
   async function getCircleKit() {
-    const { AppKit } = await import('@circle-fin/app-kit');
-    const { createViemAdapterFromProvider } = await import('@circle-fin/adapter-viem-v2');
+    const { AppKit } = await import(/* webpackIgnore: true */ '@circle-fin/app-kit');
+    const { createViemAdapterFromProvider } = await import(/* webpackIgnore: true */ '@circle-fin/adapter-viem-v2');
     const ethereum = (window as any).ethereum;
     if (!ethereum) throw new Error(t('finance.noWallet'));
 
