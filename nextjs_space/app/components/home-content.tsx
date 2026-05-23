@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { TreePine, Sparkles, Globe } from 'lucide-react';
+import { TreePine, Sparkles, Globe, Zap, FlaskConical } from 'lucide-react';
 import Header from './header';
 import WalletButton from './wallet-button';
 import WishForm from './wish-form';
@@ -77,9 +77,31 @@ export default function HomeContent() {
     <div className="min-h-screen">
       <Header />
       
+      {/* Billboard */}
+      <section className="relative overflow-hidden">
+        <div className="max-w-[1200px] mx-auto px-4 pt-6 pb-2">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-purple-600/20 via-blue-600/20 to-emerald-600/20 border border-white/10 p-6 md:p-10 mb-6"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.15),transparent_60%)]" />
+            <div className="relative z-10 max-w-3xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 text-accent text-xs font-bold mb-4">
+                <Zap className="w-3 h-3" /> ETHGlobal New York 2026
+              </div>
+              <p className="text-lg md:text-xl lg:text-2xl font-medium text-white/90 leading-relaxed">
+                {t('billboard.text')}
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="max-w-[1200px] mx-auto px-4 pt-8 pb-4">
+        <div className="max-w-[1200px] mx-auto px-4 pt-4 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -113,8 +135,13 @@ export default function HomeContent() {
       </section>
 
       {/* Stats Bar */}
-      <section className="py-6 glass">
-        <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-center gap-8 md:gap-16">
+      <section className="py-6 glass relative">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+          <FlaskConical className="w-3 h-3 text-emerald-400" />
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{t('demo.badge')}</span>
+        </div>
+        <div className="max-w-[1200px] mx-auto px-4 pt-4 flex flex-col items-center">
+          <div className="flex items-center justify-center gap-8 md:gap-16">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
             <TreePine className="w-5 h-5 text-accent mx-auto mb-1" />
             <p className="text-2xl font-bold">{chainWishes?.length ?? 0}</p>
@@ -130,6 +157,8 @@ export default function HomeContent() {
             <p className="text-2xl font-bold">Arc</p>
             <p className="text-xs text-gray-400">{t('home.testnet')}</p>
           </motion.div>
+          </div>
+          <p className="text-[10px] text-gray-500 mt-3 text-center">{t('demo.statsNote')}</p>
         </div>
       </section>
 
@@ -185,7 +214,7 @@ export default function HomeContent() {
       {/* Footer */}
       <footer className="py-6 border-t border-white/5">
         <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-between text-xs text-gray-500">
-          <span className="flex items-center gap-1"><TreePine className="w-3 h-3" /> WishTree</span>
+          <span className="flex items-center gap-1"><TreePine className="w-3 h-3" /> Arcwish</span>
           <span>{t('home.poweredBy')}</span>
         </div>
       </footer>

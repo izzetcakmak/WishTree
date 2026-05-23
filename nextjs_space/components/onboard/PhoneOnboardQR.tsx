@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, MessageCircle, QrCode, Copy, CheckCircle } from 'lucide-react';
+import { Smartphone, MessageCircle, QrCode, Copy, CheckCircle, FlaskConical, ShieldCheck } from 'lucide-react';
 import { useT, useLangStore } from '@/lib/i18n';
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+14155238886';
@@ -37,8 +37,20 @@ export default function PhoneOnboardQR() {
         </div>
       </div>
 
+      {/* Sandbox badge */}
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 mb-3">
+        <FlaskConical className="w-3 h-3 text-amber-400" />
+        <span className="text-[10px] font-bold text-amber-400">{t('onboard.sandboxBadge')}</span>
+      </div>
+
       <h3 className="text-lg font-bold text-white mb-1">{t('onboard.title')}</h3>
-      <p className="text-sm text-gray-400 mb-4">{t('onboard.subtitle')}</p>
+      <p className="text-sm text-gray-400 mb-3">{t('onboard.subtitle')}</p>
+
+      {/* Trust note */}
+      <div className="flex items-start gap-2 text-left bg-white/5 rounded-lg p-2.5 mb-4">
+        <ShieldCheck className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+        <p className="text-[11px] text-gray-400 leading-snug">{t('onboard.trustNote')}</p>
+      </div>
 
       {/* QR Code */}
       <div className="bg-white p-4 rounded-xl inline-block mb-4">
@@ -91,6 +103,17 @@ export default function PhoneOnboardQR() {
         <div className="flex items-start gap-2">
           <span className="text-xs bg-accent/20 text-accent rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
           <p className="text-xs text-gray-400">{t('onboard.step3')}</p>
+        </div>
+      </div>
+
+      {/* Example message flow */}
+      <div className="mt-5 border-t border-white/10 pt-4">
+        <p className="text-xs font-semibold text-gray-300 mb-2">{t('onboard.exampleTitle')}</p>
+        <div className="space-y-1.5 text-left">
+          <div className="flex justify-end"><span className="text-[11px] bg-green-600/30 text-green-300 rounded-lg px-2.5 py-1 max-w-[80%]">{t('onboard.exampleUser1')}</span></div>
+          <div className="flex justify-start"><span className="text-[11px] bg-white/10 text-gray-300 rounded-lg px-2.5 py-1 max-w-[80%]">{t('onboard.exampleBot1')}</span></div>
+          <div className="flex justify-end"><span className="text-[11px] bg-green-600/30 text-green-300 rounded-lg px-2.5 py-1 max-w-[80%]">{t('onboard.exampleUser2')}</span></div>
+          <div className="flex justify-start"><span className="text-[11px] bg-white/10 text-gray-300 rounded-lg px-2.5 py-1 max-w-[80%]">{t('onboard.exampleBot2')}</span></div>
         </div>
       </div>
     </motion.div>

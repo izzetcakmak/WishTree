@@ -24,7 +24,7 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2 group">
           <TreePine className="w-7 h-7 text-accent group-hover:scale-110 transition-transform" />
           <span className="text-xl font-bold bg-gradient-to-r from-accent to-emerald-400 bg-clip-text text-transparent">
-            WishTree
+            Arcwish
           </span>
         </Link>
 

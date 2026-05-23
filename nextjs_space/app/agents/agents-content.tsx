@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Shield, Star, ExternalLink, Search } from 'lucide-react';
+import { Bot, Shield, Star, ExternalLink, Search, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 import Header from '../components/header';
 import { AGENT_CATEGORIES } from '@/lib/erc8004';
@@ -113,6 +113,36 @@ export default function AgentsContent() {
             </select>
           </div>
         </motion.div>
+
+        {/* Example agent cards — always shown */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <FlaskConical className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">{t('agents.exampleBadge')}</span>
+            <span className="text-[10px] text-gray-500 ml-1">— {t('agents.exampleNote')}</span>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { name: 'Charity Agent', emoji: '💝', desc: 'Routes USDC donations to verified charity wishes. Validates recipients and distributes funds based on sentiment and urgency.', caps: ['charity', 'usdc-routing', 'verification'], type: 'matchmaker' },
+              { name: 'Wish Matching Agent', emoji: '🤝', desc: 'AI-powered wish-to-donor matching. Analyzes wish content and matches with donors whose preferences align.', caps: ['nlp', 'matching', 'recommendations'], type: 'analyzer' },
+              { name: 'Fraud Filter Agent', emoji: '🛡️', desc: 'Screens wishes for spam and fraud before they enter the blessing pool. Protects the ecosystem integrity.', caps: ['fraud-detection', 'nlp', 'moderation'], type: 'validator' },
+            ].map((ex, i) => (
+              <div key={i} className="p-5 rounded-2xl bg-white/5 border border-dashed border-white/10 opacity-70 h-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">{ex.emoji}</span>
+                  <div>
+                    <h3 className="font-semibold text-white">{ex.name}</h3>
+                    <span className="text-xs text-gray-500">example</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400 mb-3 line-clamp-2">{ex.desc}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ex.caps.map((c) => (<span key={c} className="px-2 py-0.5 bg-accent/10 text-accent text-xs rounded-full">{c}</span>))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
           <div className="text-center py-20 text-gray-500">

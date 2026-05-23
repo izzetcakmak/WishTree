@@ -402,6 +402,31 @@ const translations = {
   'agent.budgetRequired': { tr: 'Bütçe 0\'dan büyük olmalı', en: 'Budget must be greater than 0' },
   'agent.newMatchmaker': { tr: 'Yardım Ajanı Oluştur', en: 'Create Helper Agent' },
 
+  // Billboard
+  'billboard.text': { tr: 'Arcwish is a WhatsApp-first social payments layer on Arc, turning wishes into programmable USDC flows, AI-assisted giving, and walletless onboarding.', en: 'Arcwish is a WhatsApp-first social payments layer on Arc, turning wishes into programmable USDC flows, AI-assisted giving, and walletless onboarding.' },
+  'billboard.cta': { tr: 'Nasıl Çalışır?', en: 'How It Works' },
+
+  // Demo badge
+  'demo.badge': { tr: 'Canlı Testnet Demo', en: 'Live Testnet Demo' },
+  'demo.statsNote': { tr: 'Veriler Arc Testnet üzerinde canlı — mainnet öncesi demo ortamı', en: 'Data is live on Arc Testnet — pre-mainnet demo environment' },
+
+  // WhatsApp sandbox
+  'onboard.sandboxBadge': { tr: '🧪 WhatsApp Sandbox / Testnet Demo', en: '🧪 WhatsApp Sandbox / Testnet Demo' },
+  'onboard.trustNote': { tr: 'Bu numara Twilio\'nun resmi WhatsApp sandbox numarasıdır. Güvenli şekilde mesaj gönderebilirsiniz.', en: 'This is Twilio\'s official WhatsApp sandbox number. You can safely send messages.' },
+  'onboard.exampleTitle': { tr: 'Örnek Mesaj Akışı', en: 'Example Message Flow' },
+  'onboard.exampleUser1': { tr: 'join sets-recall', en: 'join sets-recall' },
+  'onboard.exampleBot1': { tr: '✅ WishTree\'ye hoş geldin! Dileğini yaz.', en: '✅ Welcome to WishTree! Type your wish.' },
+  'onboard.exampleUser2': { tr: 'Dünya barışı diliyorum 🌍', en: 'I wish for world peace 🌍' },
+  'onboard.exampleBot2': { tr: '🎄 Dileğin kaydedildi! NFT oluşturuldu ✨', en: '🎄 Wish saved! NFT minted ✨' },
+
+  // Finance narrative
+  'finance.narrativeTitle': { tr: 'Hikaye Nasıl İşliyor?', en: 'How Does the Story Work?' },
+  'finance.narrative': { tr: 'Bir kullanıcı dilek paylaşır → başka biri USDC ile destek olur → AI ajan fonları doğru kategoriye yönlendirir. Tüm akış on-chain, şeffaf ve otonom.', en: 'A user shares a wish → someone else supports with USDC → AI agent routes funds to the right category. The entire flow is on-chain, transparent, and autonomous.' },
+
+  // Example agents
+  'agents.exampleBadge': { tr: 'Örnek Ajanlar', en: 'Example Agents' },
+  'agents.exampleNote': { tr: 'Bu kartlar sistemin nasıl çalıştığını göstermek içindir', en: 'These cards demonstrate how the system works' },
+
   // Language helper
   '_lang': { tr: 'tr', en: 'en' },
 } as const;

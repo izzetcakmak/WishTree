@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
-  title: 'WishTree - Blockchain Wish Platform',
-  description: 'Make your wishes on the blockchain and receive unique NFTs. Powered by AI analysis.',
+  title: 'Arcwish — WishTree powered by Arc',
+  description: 'WhatsApp-first social payments layer on Arc. Wishes become programmable USDC flows with AI-assisted giving.',
   openGraph: {
-    title: 'WishTree - Blockchain Wish Platform',
-    description: 'Make your wishes on the blockchain and receive unique NFTs.',
+    title: 'Arcwish — WishTree powered by Arc',
+    description: 'WhatsApp-first social payments layer on Arc. Wishes become programmable USDC flows with AI-assisted giving.',
     images: ['/og-image.png'],
   },
   icons: {

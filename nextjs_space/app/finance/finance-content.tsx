@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, RefreshCw, Layers, ArrowDownToLine, ArrowUpFromLine, Repeat2, Clock, DollarSign, ShieldCheck } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, Send, Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, RefreshCw, Layers, ArrowDownToLine, ArrowUpFromLine, Repeat2, Clock, DollarSign, ShieldCheck, ArrowRight } from 'lucide-react';
 import Header from '../components/header';
 import { useT } from '@/lib/i18n';
 import { connectWallet, checkNetwork, switchToArcTestnet } from '@/lib/blockchain';
@@ -887,13 +887,22 @@ export default function FinanceContent() {
       <main className="max-w-[600px] mx-auto px-4 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           {/* Title */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
               <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-green-400 bg-clip-text text-transparent">
                 {t('finance.title')}
               </span>
             </h1>
             <p className="text-gray-400 text-sm">{t('finance.subtitle')}</p>
+          </div>
+
+          {/* Narrative */}
+          <div className="rounded-xl bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-green-500/10 border border-white/10 p-4 mb-8">
+            <p className="text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+              <ArrowRight className="w-3.5 h-3.5 text-accent" />
+              {t('finance.narrativeTitle')}
+            </p>
+            <p className="text-sm text-gray-400 leading-relaxed">{t('finance.narrative')}</p>
           </div>
 
           {/* Wallet Connect / Balance */}
