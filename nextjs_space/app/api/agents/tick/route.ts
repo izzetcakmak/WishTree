@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
               wishId: wish.id,
               blesserAddress: agent.walletAddress || '',
               amount: decision.amount,
-              message: `🤖 ${agent.name}: ${decision.reason}`,
+              message: `🤖 ${agent.name} (Token #${agent.agentTokenId ?? '?'}): ${decision.reason}`,
               agentId: agent.id,
             });
 

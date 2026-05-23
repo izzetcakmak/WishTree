@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Plus, Shield, Star, ExternalLink, Search } from 'lucide-react';
+import { Bot, Shield, Star, ExternalLink, Search } from 'lucide-react';
 import Link from 'next/link';
 import Header from '../components/header';
 import { AGENT_CATEGORIES } from '@/lib/erc8004';
@@ -87,12 +87,6 @@ export default function AgentsContent() {
               >
                 <Bot className="w-4 h-4" /> {t('agent.newMatchmaker')}
               </Link>
-              <Link
-                href="/agents/register"
-                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors text-sm"
-              >
-                <Plus className="w-4 h-4" /> {t('agents.register')}
-              </Link>
             </div>
           </div>
 
@@ -131,10 +125,10 @@ export default function AgentsContent() {
             <h3 className="text-xl font-semibold text-gray-400 mb-2">{t('agents.noFound')}</h3>
             <p className="text-gray-500 mb-6">{t('agents.beFirst')}</p>
             <Link
-              href="/agents/register"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/90 text-white rounded-xl font-medium transition-colors"
+              href="/agents/new"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium transition-colors"
             >
-              <Plus className="w-4 h-4" /> {t('agents.registerYour')}
+              <Bot className="w-4 h-4" /> {t('agent.newMatchmaker')}
             </Link>
           </motion.div>
         ) : (
@@ -159,9 +153,10 @@ export default function AgentsContent() {
                           </div>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          agent.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
                           agent.status === 'registered' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                         }`}>
-                          {agent.status === 'registered' ? t('agents.registered') : t('agents.pending')}
+                          {agent.status === 'active' ? t('agents.active') : agent.status === 'registered' ? t('agents.registered') : t('agents.pending')}
                         </span>
                       </div>
 

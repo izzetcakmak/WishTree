@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { registerAgentOnChain } from '@/lib/erc8004-blockchain';
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,9 +37,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Determine initial status based on agent type
     const isMatchmaker = agentType === 'matchmaker';
-    const initialStatus = txHash ? 'registered' : (isMatchmaker ? 'active' : 'pending');
+
+    // Build metadata URI for on-chain registration
+    const agentMetadataURI = metadataURI || `wishtree://agent/${encodeURIComponent(name)}`;
+
+    // Server-side on-chain registration via relayer for ALL agents
+    let onChainTxHash = txHash || null;
+    let onChainTokenId = agentTokenId ?? null;
+
+    if (!onChainTxHash) {
+      try {
+        console.log(`[API] Registering agent "${name}" on-chain...`);
+        const result = await registerAgentOnChain(agentMetadataURI);
+        onChainTxHash = result.txHash;
+        onChainTokenId = result.agentTokenId;
+        console.log(`[API] Agent registered: tokenId=${result.agentTokenId}, tx=${result.txHash}`);
+      } catch (regErr: any) {
+        console.error('[API] On-chain registration failed:', regErr?.message);
+        // Still create the agent in DB but mark as pending
+      }
+    }
+
+    const initialStatus = onChainTxHash ? 'registered' : 'pending';
 
     const agent = await prisma.agent.create({
       data: {
@@ -47,11 +68,11 @@ export async function POST(req: NextRequest) {
         agentType,
         capabilities: capabilities || [],
         version: version || '1.0.0',
-        metadataURI: metadataURI || null,
+        metadataURI: agentMetadataURI,
         ownerAddress: ownerAddress.toLowerCase(),
-        txHash: txHash || null,
-        agentTokenId: agentTokenId ?? null,
-        status: initialStatus,
+        txHash: onChainTxHash,
+        agentTokenId: onChainTokenId,
+        status: isMatchmaker && onChainTxHash ? 'active' : initialStatus,
         // Matchmaker agent fields
         criteria: criteria || null,
         monthlyBudget: monthlyBudget ? Number(monthlyBudget) : 0,

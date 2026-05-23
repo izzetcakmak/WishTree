@@ -10,6 +10,7 @@ import { getProvider } from './blockchain';
 
 // --- Identity Registry ---
 
+/** Client-side register via MetaMask (legacy — kept for reference) */
 export async function registerAgent(metadataURI: string): Promise<ethers.ContractTransaction> {
   const provider = await getProvider();
   if (!provider) throw new Error('No provider');
@@ -21,6 +22,52 @@ export async function registerAgent(metadataURI: string): Promise<ethers.Contrac
   );
   const tx = await contract.register(metadataURI);
   return tx;
+}
+
+/**
+ * Server-side agent registration using relayer private key.
+ * Calls IdentityRegistry.register(metadataURI) and returns { txHash, agentTokenId }.
+ */
+export async function registerAgentOnChain(metadataURI: string): Promise<{ txHash: string; agentTokenId: number }> {
+  const relayerKey = process.env.RELAYER_PRIVATE_KEY;
+  if (!relayerKey) throw new Error('RELAYER_PRIVATE_KEY not configured');
+
+  const provider = new ethers.providers.JsonRpcProvider(ARC_TESTNET.rpcUrl);
+  const wallet = new ethers.Wallet(relayerKey, provider);
+  const contract = new ethers.Contract(
+    ERC8004_CONTRACTS.IDENTITY_REGISTRY,
+    IDENTITY_REGISTRY_ABI,
+    wallet
+  );
+
+  console.log(`[ERC-8004] Registering agent on-chain via relayer ${wallet.address}...`);
+  const tx = await contract.register(metadataURI);
+  const receipt = await tx.wait();
+  console.log(`[ERC-8004] TX confirmed: ${receipt.transactionHash}`);
+
+  // Parse Transfer event to get tokenId
+  const iface = new ethers.utils.Interface(IDENTITY_REGISTRY_ABI as any);
+  let agentTokenId: number | null = null;
+  for (const log of receipt.logs) {
+    try {
+      if (log.address?.toLowerCase() !== ERC8004_CONTRACTS.IDENTITY_REGISTRY.toLowerCase()) continue;
+      const parsed = iface.parseLog(log);
+      if (parsed.name === 'Transfer') {
+        const tokenId = parsed.args.tokenId;
+        agentTokenId = typeof tokenId?.toNumber === 'function' ? tokenId.toNumber() : Number(tokenId);
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (agentTokenId === null) {
+    throw new Error('Agent registered but could not parse tokenId from receipt');
+  }
+
+  console.log(`[ERC-8004] Agent registered with tokenId: ${agentTokenId}`);
+  return { txHash: receipt.transactionHash, agentTokenId };
 }
 
 export async function getAgentOwner(agentId: number): Promise<string | null> {
