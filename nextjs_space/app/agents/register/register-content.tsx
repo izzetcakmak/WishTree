@@ -68,7 +68,7 @@ export default function RegisterContent() {
         version: form.version,
       };
 
-      const metadataURI = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
+      const metadataURI = `data:application/json;base64,${btoa(unescape(encodeURIComponent(JSON.stringify(metadata))))}`;
 
       setStep('signing');
       const tx = await registerAgent(metadataURI);

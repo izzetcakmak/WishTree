@@ -110,7 +110,7 @@ export default function AgentDetailContent() {
     setValLoading(true); setValError(''); setValSuccess(false);
     try {
       await ensureWallet();
-      const requestURI = `data:application/json;base64,${btoa(JSON.stringify({ agent: agent.name, type: 'validation_request' }))}`;
+      const requestURI = `data:application/json;base64,${btoa(unescape(encodeURIComponent(JSON.stringify({ agent: agent.name, type: 'validation_request' }))))}`;
       const { tx, requestHash } = await requestValidation(valAddress, agent.agentTokenId, requestURI);
       await tx.wait();
 
